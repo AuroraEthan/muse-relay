@@ -1,0 +1,11 @@
+*
+!server.py
+!queue_store.py
+!entrypoint.py
+!static/
+!static/**
+!muse_store.py
+!muse_api.py
+!muse_agent.py
+!vm_agent.py
+!runtime.py
