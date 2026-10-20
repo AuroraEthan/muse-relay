@@ -6,6 +6,7 @@ import unittest
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import patch
 from pathlib import Path
 
 import server
@@ -13,6 +14,11 @@ import server
 
 class API(unittest.TestCase):
     def setUp(self):
+        # Wall time cannot expire a 150ms test lease on a busy CI runner.
+        # Advance this clock explicitly only when testing expiry/retry semantics.
+        clock_patch = patch('queue_store.time.time', return_value=time.time())
+        self.clock = clock_patch.start()
+        self.addCleanup(clock_patch.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.db = str(Path(self.temp.name) / 'queue.db')
         self.start()
@@ -77,7 +83,7 @@ class API(unittest.TestCase):
     def test_lease_expiry_and_stale_ack(self):
         self.put()
         first = self.claim()
-        time.sleep(0.2)
+        self.clock.return_value += 0.2
         second = self.claim()
         self.assertNotEqual(first['lease_token'], second['lease_token'])
         self.assertEqual(self.ack(first)[0], 409)
@@ -123,7 +129,7 @@ class API(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError):
                 agent.poll_once()
             self.assertNotEqual(self.request('/messages/job1')[1]['status'], 'acked')
-            time.sleep(0.2)
+            self.clock.return_value += 0.2
             fail[0] = False
             self.assertTrue(agent.poll_once())
             self.assertEqual(received[-1], ('job1', {'hello': 'world'}))
@@ -138,7 +144,7 @@ class API(unittest.TestCase):
         agent = Agent(self.url, 'consumer', 'http://127.0.0.1:1', ledger)
         m = self.claim()
         agent.remember(m['id'])  # Simulate success persisted before lost server ack.
-        time.sleep(0.2)
+        self.clock.return_value += 0.2
         restarted = Agent(self.url, 'consumer', 'http://127.0.0.1:1', ledger)
         self.assertTrue(restarted.poll_once())  # Port 1 is never contacted.
         self.assertEqual(self.request('/messages/job1')[1]['status'], 'acked')
@@ -174,7 +180,7 @@ class API(unittest.TestCase):
     def test_expired_lease_cannot_ack_without_reclaim(self):
         self.put()
         message = self.claim()
-        time.sleep(0.2)
+        self.clock.return_value += 0.2
         self.assertEqual(self.ack(message)[0], 409)
 
     def test_worker_tcp_wrong_ack_is_not_marked_delivered(self):
