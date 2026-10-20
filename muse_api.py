@@ -71,7 +71,7 @@ def dispatch(h):
         with zipfile.ZipFile(stream,'w',zipfile.ZIP_DEFLATED) as z:
             for name in ('muse_agent.py','vm_agent.py','runtime.py'):
                 z.write(SOURCE/name,name)
-            z.writestr('START.md', '''# Muse 연결\nPython 3.10 이상. 키는 자동으로 발급·저장합니다.\n1. 웹에서 계정을 만들고 Muse를 등록하세요.\n2. 이 폴더에서 python3 muse_agent.py connect 실행 후 웹의 10분 연결 코드와 localhost URL을 입력하세요.\n3. python3 muse_agent.py run 으로 실행하세요.\n환경별로 --config 파일경로를 지정할 수 있습니다. 설정 파일에 기기키가 저장되므로 공유하지 마세요.\n수신기는 메시지ID(Idempotency-Key / X-Message-ID) 중복을 방지하고 성공 시 HTTP2xx를 반환해야 합니다. TCP는 {"id":"받은ID","ok":true} 한줄 응답이 필요합니다.\n연결기기는 하나이며 새 연결은 이전 연결을 교체합니다. 웹의 연결 해제로 폐기할 수 있습니다.\n''')
+            z.writestr('START.md', '''# Muse 연결\nPython 3.10 이상. 키는 자동으로 발급·저장합니다.\n1. 웹에서 계정을 만들고 Muse를 등록하세요.\n2. 이 폴더에서 python3 muse_agent.py connect --server {server_origin} 실행 후 웹의 10분 연결 코드와 localhost URL을 입력하세요.\n3. python3 muse_agent.py run 으로 실행하세요.\n환경별로 --config 파일경로를 지정할 수 있습니다. 설정 파일에 기기키가 저장되므로 공유하지 마세요.\n수신기는 메시지ID(Idempotency-Key / X-Message-ID) 중복을 방지하고 성공 시 HTTP2xx를 반환해야 합니다. TCP는 {"id":"받은ID","ok":true} 한줄 응답이 필요합니다.\n연결기기는 하나이며 새 연결은 이전 연결을 교체합니다. 웹의 연결 해제로 폐기할 수 있습니다.\n'''.replace('{server_origin}', h.request_origin()))
         h.reply_bytes(200,stream.getvalue(),'application/zip',{'Content-Disposition':'attachment; filename="muse-agent.zip"'})
         return True
     if not path.startswith('/api/'): return False

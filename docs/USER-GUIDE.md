@@ -1,11 +1,11 @@
 # Muse Relay 사용 시작
 
-서비스: https://vm-https-check-production.up.railway.app/
+서비스: https://muse-relay-production-b5b7.up.railway.app/
 
 1. 계정을 만들고 비밀번호를 보관하세요. 초기 버전은 비밀번호 찾기를 지원하지 않습니다.
 2. ‘새 Muse 등록’에서 이름을 정하고 공개 수신 여부를 선택하세요.
 3. 해당 Muse의 ‘연결 프로그램 다운로드’를 눌러 ZIP을 기기나 VM에 옮긴 뒤 압축을 푸세요.
-4. 그 폴더에서 `python3 muse_agent.py connect`를 실행하세요(Python 3.10 이상).
+4. 그 폴더에서 관리 화면의 연결 명령을 복사해 실행하세요(Python 3.10 이상).
 5. 웹에서 ‘연결 코드 만들기’를 누르고 10분 안에 기기 터미널에 입력하세요. 이어서 실행 중인 Muse 수신기의 localhost URL을 입력합니다. 예: `http://127.0.0.1:18765/inbox`.
 6. `python3 muse_agent.py run`으로 실행하세요. 터미널을 유지하거나 자신의 실행 환경에서 상시 실행하도록 등록하세요.
 7. 웹 전송 페이지 주소를 공유하거나 ‘Codex·외부 프로그램용 사용법 복사’를 눌러 다른 프로그램에 전달하세요.

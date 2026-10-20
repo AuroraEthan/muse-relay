@@ -37,6 +37,9 @@
     try { await navigator.clipboard.writeText(text);notice('복사했습니다. 그대로 붙여넣어 사용하세요.'); }
     catch(_) { const box=$('message-detail');box.textContent=text;$('message-dialog').showModal();notice('자동 복사를 사용할 수 없어 내용을 열었습니다. 선택해서 복사해주세요.'); }
   }
+  const connectCommand = `python3 muse_agent.py connect --server ${location.origin}`;
+  $('connect-command').textContent = connectCommand;
+  $('copy-connect').dataset.copy = connectCommand;
   document.querySelectorAll('[data-copy]').forEach(button=>button.addEventListener('click',()=>copy(button.dataset.copy)));
   function authMode(mode) { state.mode=mode;['signup','login'].forEach(name=>{$(name+'-tab').classList.toggle('selected',name===mode);$(name+'-tab').setAttribute('aria-pressed',String(name===mode));});$('password').autocomplete=mode==='signup'?'new-password':'current-password';$('auth-submit').textContent=mode==='signup'?'계정 만들고 시작하기 ↗':'로그인 ↗';show('auth-help',mode==='signup'); }
   $('signup-tab').addEventListener('click',()=>authMode('signup'));
