@@ -4,12 +4,12 @@
 
 - server.py: HTTP 서버, 기존 단일 VM API와 정적 파일.
 - muse_api.py: 계정·소유자·기기·Muse별 API 라우팅.
-- muse_store.py: scrypt 비밀번호, 해시된 세션·연결 코드·기기키, 소유권, 사용량 제한.
+- muse_store.py: scrypt 비밀번호, 해시된 세션·연결 코드·기기키·송신 키, 소유권, 사용량 제한.
 - queue_store.py: SQLite 트랜잭션으로 저장·임시 점유·완료 처리.
 - muse_agent.py: 일회용 코드 교환과 연결 설정, 기기 실행.
 - vm_agent.py: 폴링, HTTP/TCP localhost 전달, 전달 이력.
 - runtime.py: 리다이렉트 제한과 URL 검증 등 공유 도구.
-- static/muse.*: 가입·등록·관리·공개 전송 화면.
+- static/muse.*: 가입·등록·관리·소유자 전송·송신 키 관리 화면.
 
 ## 저장소
 
@@ -21,7 +21,7 @@ DB_PATH가 /data/queue.db일 때 계정·세션·Muse 레지스트리와 기존 
 
 ## 접근 범위
 
-공개 Muse의 /send만 무인증·외부 CORS를 허용합니다. 비공개 Muse는 같은 Origin의 소유자 세션으로 전송합니다. 내역과 설정은 소유자에게만 허용됩니다. 기기키는 해당 Muse의 claim·ack만 허용됩니다. 연결 코드는10분 안에 한 번만 교환되며 새 기기 연결은 이전 키를 대체합니다.
+공통 /api/send는 Bearer 송신 키로 한 Muse를 찾고 외부 CORS를 허용합니다. 키는 해시만 저장하며 전송 이외 권한은 없습니다. 키 교체·폐기는 기기키와 독립적입니다. Muse별 /send는 같은 Origin의 소유자 세션으로만 전송합니다. 익명 전송과 비소유자 메타데이터 조회는 허용하지 않습니다. 기존 public_send 플래그는 시작 시 false로 정규화합니다. 내역과 설정은 소유자에게만 허용됩니다. 기기키는 해당 Muse의 claim·ack만 허용됩니다. 연결 코드는10분 안에 한 번만 교환되며 새 기기 연결은 이전 키를 대체합니다.
 
 소유자 세션은30일 HttpOnly·SameSite=Strict이며 HTTPS에서 Secure를 적용합니다. 완료 기록은30일 후 큐 접근 시 정리하고 유휴 큐도 매시간 정리합니다. 미전달 데이터는 보관합니다. SQLite 삭제는 파일의 물리적 크기를 즉시 줄이지 않으며 페이지를 재사용합니다.
 

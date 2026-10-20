@@ -71,34 +71,106 @@ class Muses(unittest.TestCase):
             self.assertEqual(self.req(f'/api/muses/{mid}/pairing',{},client)[0],404)
             self.assertEqual(self.req(f'/api/muses/{mid}/settings',{'public_send':False},client)[0],404)
         self.assertEqual([m['id'] for m in self.req('/api/muses',client=self.a)[1]['muses']],[a])
-        self.req(f'/api/muses/{a}/send','hello a')
-        self.req(f'/api/muses/{b}/send','hello b')
+        self.req(f'/api/muses/{a}/send','hello a',self.a)
+        self.req(f'/api/muses/{b}/send','hello b',self.b)
         self.assertEqual(self.req(f'/api/muses/{a}/messages',client=self.a)[1]['stats']['total'],1)
         self.assertEqual(self.req('/messages',headers={'Authorization':'Bearer producer'})[1]['stats']['total'],0)
         self.assertEqual(self.req('/api/muses')[0],401)
 
-    def test_public_plain_send_cors_and_owner_private_switch(self):
-        self.account(self.a,'alice'); mid=self.muse(self.a); base=f'/api/muses/{mid}'
-        result=self.req(base+'/send','안녕하세요',headers={'Origin':'https://external.example','Idempotency-Key':'same'})
-        self.assertEqual(result[0],201); self.assertEqual(result[2]['Access-Control-Allow-Origin'],'*')
-        self.assertEqual(self.req(base+'/send','안녕하세요',headers={'Idempotency-Key':'same'})[1]['created'],False)
-        self.assertEqual(self.req(base+'/send','different',headers={'Idempotency-Key':'same'})[0],409)
-        self.assertEqual(self.req(base+'/send',' ')[0],400)
-        self.assertEqual(self.req(base+'/send','x'*16385)[0],413)
-        self.assertEqual(self.req(base+'/send',method='OPTIONS')[0],204)
-        self.assertEqual(self.req(base+'/settings',{'public_send':False},self.a)[0],200)
-        self.assertEqual(self.req(base+'/send','blocked')[0],401)
+    def sender_key(self, mid, client):
+        result=self.req(f'/api/muses/{mid}/sender-key',{},client)
+        self.assertEqual(result[0],201,result[1])
+        return result[1]['key']
+
+    def test_sender_key_routing_and_plain_text_contract(self):
+        self.account(self.a,'alice'); self.account(self.b,'bob')
+        a=self.muse(self.a); b=self.muse(self.b)
+        ka=self.sender_key(a,self.a); kb=self.sender_key(b,self.b)
+        headers={'Authorization':'Bearer '+ka,'Origin':'https://external.example','Idempotency-Key':'same'}
+        result=self.req('/api/send','안녕하세요',headers=headers)
+        self.assertEqual(result[0],201,result[1])
+        self.assertEqual(result[2]['Access-Control-Allow-Origin'],'*')
+        self.assertNotIn('Access-Control-Allow-Credentials',result[2])
+        self.assertEqual(self.req('/api/send','안녕하세요',headers=headers)[1]['created'],False)
+        self.assertEqual(self.req('/api/send','different',headers=headers)[0],409)
+        self.assertEqual(self.req('/api/send',' ',headers=headers)[0],400)
+        self.assertEqual(self.req('/api/send','x'*16385,headers=headers)[0],413)
+        self.assertEqual(self.req('/api/send',{'message':'json'},headers=headers)[0],415)
+        self.assertEqual(self.req('/api/send',method='OPTIONS')[0],204)
+        self.assertEqual(self.req('/api/send?muse_id='+a,'other',headers={'Authorization':'Bearer '+kb})[0],201)
+        self.assertEqual(self.req(f'/api/muses/{a}/messages',client=self.a)[1]['stats']['total'],1)
+        self.assertEqual(self.req(f'/api/muses/{b}/messages',client=self.b)[1]['stats']['total'],1)
+
+    def test_no_public_sending_metadata_or_keyless_fallback(self):
+        self.account(self.a,'alice'); mid=self.muse(self.a)
+        self.assertFalse(self.req('/api/muses',client=self.a)[1]['muses'][0]['public_send'])
+        # Even a pre-migration row set public must not grant anonymous access.
+        with self.http.registry.connection() as db: db.execute('UPDATE muses SET public_send=1 WHERE id=?',(mid,))
+        base=f'/api/muses/{mid}'
+        for headers in ({},{'Authorization':'Bearer bad'}):
+            self.assertEqual(self.req('/api/send','blocked',headers=headers)[0],401)
+            self.assertEqual(self.req(base+'/send','blocked',headers=headers)[0],401)
+        self.assertEqual(self.req('/api/send','cookie is not API key',self.a)[0],401)
+        self.assertEqual(self.req(base)[0],401)
         self.assertEqual(self.req(base+'/send','owner',self.a)[0],201)
-        self.assertEqual(self.req(base)[1]['muse']['public_send'],False)
-        self.assertNotIn('owner',self.req(base)[1]['muse'])
-        self.assertEqual(self.req(base+'/messages')[0],401)
+        self.assertEqual(self.req(base+'/send','csrf',self.a,headers={'Origin':'https://evil.example'})[0],403)
+        self.assertEqual(self.req(base+'/settings',{'public_send':True},self.a)[0],400)
+        from muse_store import Registry
+        registry=Registry(self.db)
+        self.assertFalse(registry.info(mid)['public_send'])
+
+    def test_sender_key_lifecycle_role_separation_and_hash_persistence(self):
+        self.account(self.a,'alice'); self.account(self.b,'bob')
+        mid=self.muse(self.a); base=f'/api/muses/{mid}'
+        token=self.pair(mid,self.a); key=self.sender_key(mid,self.a)
+        auth={'Authorization':'Bearer '+key}
+        self.assertEqual(self.req('/api/send','device key',headers={'Authorization':'Bearer '+token})[0],401)
+        for tail,body in [('claim',{}),('pairing',{}),('sender-key',{}),('sender-key/revoke',{}),('device/revoke',{})]:
+            self.assertEqual(self.req(base+'/'+tail,body,headers=auth)[0],401)
+        self.assertEqual(self.req(base+'/messages',headers=auth)[0],401)
+        self.assertEqual(self.req(base+'/sender-key',{},self.b)[0],404)
+        self.assertEqual(self.req(base+'/sender-key/revoke',{},self.b)[0],404)
+        for tail in ('sender-key','sender-key/revoke'):
+            self.assertEqual(self.req(base+'/'+tail,{},self.a,headers={'Origin':'https://evil.example'})[0],403)
+        from muse_store import Registry
+        registry=Registry(self.db)
+        self.assertEqual(registry.sender(key),mid)
+        with registry.connection() as db:
+            rows=[dict(r) for r in db.execute('SELECT * FROM muse_sender_keys')]
+        self.assertNotIn(key,str(rows))
+        view=self.req(base,client=self.a)[1]['muse']
+        self.assertTrue(view['sender_key']['active']); self.assertNotIn(key,str(view))
+        self.assertNotIn('token_hash',str(view))
+        new=self.sender_key(mid,self.a); self.assertNotEqual(key,new)
+        self.assertEqual(self.req('/api/send','old',headers=auth)[0],401)
+        ident=self.req('/api/send','new',headers={'Authorization':'Bearer '+new})[1]['id']
+        claim=self.req(base+'/claim',{},headers={'Authorization':'Bearer '+token})[1]['message']
+        self.assertEqual(claim['id'],ident)
+        self.assertEqual(self.req(base+'/messages/'+ident+'/ack',{'lease_token':claim['lease_token']},headers={'Authorization':'Bearer '+token})[0],200)
+        self.assertEqual(self.req(base+'/sender-key/revoke',{},self.a)[0],200)
+        self.assertEqual(self.req('/api/send','revoked',headers={'Authorization':'Bearer '+new})[0],401)
+        self.assertFalse(self.req(base,client=self.a)[1]['muse']['sender_key']['active'])
+        self.assertTrue(registry.device(mid,token))
+
+    def test_concurrent_key_rotation_leaves_one_active_and_restart_keeps_device(self):
+        self.account(self.a,'alice');mid=self.muse(self.a);device=self.pair(mid,self.a)
+        owner=self.req('/api/auth/me',client=self.a)[1]['user']['id']
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            keys=list(pool.map(lambda _:self.http.registry.rotate_sender_key(mid,owner)['key'],range(2)))
+        from muse_store import Registry
+        registry=Registry(self.db)
+        self.assertEqual(sum(registry.sender(k)==mid for k in keys),1)
+        self.assertTrue(registry.device(mid,device))
+        self.assertEqual(registry.queue(mid).list_messages()['stats']['total'],0)
+        registry.revoke_sender_key(mid,owner)
+        self.assertTrue(all(Registry(self.db).sender(k) is None for k in keys))
 
     def test_pairing_one_use_rotates_device_and_scoped_delivery(self):
         self.account(self.a,'alice'); mid=self.muse(self.a); other=self.muse(self.a,'Other'); base=f'/api/muses/{mid}'
         code=self.req(base+'/pairing',{},self.a)[1]['code']
         token=self.req('/api/pair',{'code':code})[1]['device_token']; headers={'Authorization':'Bearer '+token}
         self.assertEqual(self.req('/api/pair',{'code':code})[0],401)
-        ident=self.req(base+'/send','hello')[1]['id']
+        ident=self.req(base+'/send','hello',self.a)[1]['id']
         claim=self.req(base+'/claim',{},headers=headers)[1]['message']
         self.assertEqual(claim['id'],ident); self.assertEqual(claim['payload'],{'message':'hello'})
         self.assertEqual(self.req(f'/api/muses/{other}/claim',{},headers=headers)[0],401)

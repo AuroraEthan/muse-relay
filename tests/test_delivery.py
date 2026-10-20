@@ -407,59 +407,18 @@ class API(unittest.TestCase):
         token = self.http.queue.issue_session('producer', ttl=-1)
         self.assertEqual(self.browser_request('/session', cookie='relay_session=' + token)[0], 401)
 
-    def test_public_mode_accepts_anonymous_sentence_but_protects_admin_and_vm(self):
+    def test_legacy_public_flag_never_enables_anonymous_send(self):
         self.http.public_send = True
-        code, _, receipt = self.browser_request('/send', text='아무 키 없이 문장만 보냅니다.')
-        self.assertEqual(code, 201)
-        self.assertEqual(self.request('/messages/' + receipt['id'])[1]['payload'],
-                         {'message': '아무 키 없이 문장만 보냅니다.'})
-        self.assertEqual(self.browser_request('/messages')[0], 401)
-        self.assertEqual(self.browser_request('/claim', text='{}')[0], 401)
-        self.assertEqual(self.browser_request('/session', text='')[0], 401)
-        self.assertEqual(self.browser_request('/messages/' + receipt['id'] + '/ack', text='{}')[0], 401)
+        self.assertFalse(self.browser_request('/config')[2]['public_send'])
+        self.assertEqual(self.browser_request('/send', text='anonymous')[0],401)
+        self.assertEqual(self.browser_request('/send', origin='https://external.example', text='cross origin')[0],401)
+        self.assertEqual(self.browser_request('/messages')[0],401)
 
-    def test_public_config_and_cross_origin_plain_text(self):
-        self.http.public_send = True
-        self.assertTrue(self.browser_request('/config')[2]['public_send'])
-        code, headers, _ = self.browser_request('/send', origin='https://external.example', text='external sentence')
-        self.assertEqual(code, 201)
-        self.assertEqual(headers['Access-Control-Allow-Origin'], '*')
-        self.assertNotIn('Access-Control-Allow-Credentials', headers)
-        request = urllib.request.Request(self.url + '/send', method='OPTIONS')
-        with urllib.request.urlopen(request) as response:
-            self.assertEqual(response.status, 204)
-            self.assertIn('POST', response.headers['Access-Control-Allow-Methods'])
-
-    def test_public_send_still_validates_input(self):
-        self.http.public_send = True
-        self.assertEqual(self.browser_request('/send', text='  ')[0], 400)
-        self.assertEqual(self.browser_request('/send', text='x' * 300000)[0], 413)
-
-    def test_plain_helper_can_send_without_a_key_in_public_mode(self):
+    def test_plain_helper_requires_producer_key_even_with_stale_public_flag(self):
         from send_text import send_plain
         self.http.public_send = True
-        receipt = send_plain(self.url, '', 'anonymous helper')
-        self.assertTrue(receipt['created'])
-
-    def test_public_cli_needs_neither_key_nor_config_file(self):
-        import os
-        import subprocess
-        import sys
-        self.http.public_send = True
-        seen = []
-        class Capture(server.Handler):
-            def dispatch(local):
-                if local.path == '/send':
-                    seen.append(local.headers.get('Authorization'))
-                return super().dispatch()
-        self.http.RequestHandlerClass = Capture
-        env = {k: v for k, v in os.environ.items() if k not in ('PRODUCER_TOKEN', 'SERVER_URL', 'PUBLIC_SEND')}
-        env.update(SERVER_URL=self.url, PUBLIC_SEND='true')
-        result = subprocess.run([sys.executable, str(Path(server.__file__).parent / 'send_text.py'),
-            'send', '--text', 'no config, no key'], cwd=self.temp.name, env=env,
-            capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(seen, [None])
+        with self.assertRaises(Exception): send_plain(self.url, '', 'anonymous helper')
+        self.assertTrue(send_plain(self.url, 'producer', 'authenticated helper')['created'])
 
 
 

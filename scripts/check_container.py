@@ -34,6 +34,11 @@ assert b'VM' in get('/legacy')
 assert json.loads(get('/openapi.json'))['info']['version'] == '2.0.0'
 get('/api/auth/me', 401)
 get('/api/muses', 401)
+for path in ('/api/send','/send'):
+    request=urllib.request.Request(ORIGIN+path,data=b'blocked anonymous',headers={'Content-Type':'text/plain'})
+    try: urllib.request.urlopen(request,timeout=3)
+    except urllib.error.HTTPError as error: assert error.code==401, (path,error.code)
+    else: raise AssertionError('Anonymous send accepted: '+path)
 get('/producer.env', 404)
 get('/vm.env', 404)
 with zipfile.ZipFile(io.BytesIO(get('/downloads/muse-agent.zip'))) as archive:

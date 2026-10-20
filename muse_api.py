@@ -1,4 +1,4 @@
-"""HTTP interface for self-service Muse accounts, devices and public senders."""
+"""HTTP interface for self-service Muse accounts, devices and scoped sender keys."""
 import io
 import json
 from pathlib import Path
@@ -8,7 +8,6 @@ from http.cookies import SimpleCookie, CookieError
 from urllib.parse import parse_qs, urlsplit
 from muse_store import MUSE_ID, ServiceError, SESSION_TTL
 
-SEND_PATH = re.compile(r'/api/muses/(' + MUSE_ID + r')/send')
 SOURCE = Path(__file__).parent
 
 
@@ -96,12 +95,19 @@ def _dispatch(h,path):
         return h.reply(200,dict(muses=registry.list(user(h)['id'])))
     if path=='/api/muses' and method=='POST':
         data=json_body(h); account=user(h)
-        return h.reply(201,dict(muse=registry.create(account['id'],data.get('name'),data.get('public_send',True))))
+        return h.reply(201,dict(muse=registry.create(account['id'],data.get('name'),False)))
     if path=='/api/pair' and method=='POST':
         # Pairing runs in the device CLI without browser cookies, not an owner mutation.
         if h.headers.get_content_type()!='application/json': raise ServiceError(415,'expected_application_json')
         source_rate(h,'pair',20)
         return h.reply(200,registry.pair(h.read_json().get('code')))
+    if path=='/api/send' and method=='OPTIONS':
+        return h.reply_bytes(204,b'','text/plain')
+    if path=='/api/send' and method=='POST':
+        auth=h.headers.get('Authorization','')
+        mid=registry.sender(auth[7:] if auth.startswith('Bearer ') else '')
+        if not mid: raise ServiceError(401,'invalid_sender_key')
+        return send_text(h,mid)
     match=re.fullmatch(r'/api/muses/('+MUSE_ID+r')(?:/(.*))?',path)
     if not match: raise ServiceError(404,'not_found')
     mid,tail=match[1],match[2] or ''
@@ -110,22 +116,17 @@ def _dispatch(h,path):
     info=registry.info(mid)
     if not info: raise ServiceError(404,'muse_not_found')
     if not tail and method=='GET':
-        account=registry.user(cookie_token(h))
-        if account:
-            try: info=registry.owned(mid,account['id'])
-            except ServiceError: pass
-        return h.reply(200,dict(muse=info))
+        return h.reply(200,dict(muse=owner(h,mid)))
     if tail=='send' and method=='POST':
-        if not info['public_send']:
-            owner(h,mid)
-            if h.headers.get('Origin')!=h.request_origin(): raise ServiceError(403,'same_origin_required')
-        registry.rate('send:'+mid,60)
-        text,key=text_body(h)
-        ident,created=registry.queue(mid).put_text(text,key)
-        return h.reply(201 if created else 200,dict(id=ident,created=created))
-    if tail in ('settings','pairing','device/revoke') and method=='POST':
+        owner(h,mid)
+        if h.headers.get('Origin')!=h.request_origin(): raise ServiceError(403,'same_origin_required')
+        return send_text(h,mid)
+    if tail in ('settings','pairing','device/revoke','sender-key','sender-key/revoke') and method=='POST':
         data=json_body(h); account=user(h); current=registry.owned(mid,account['id'])
         if tail=='settings': return h.reply(200,dict(muse=registry.settings(mid,account['id'],data.get('name',current['name']),data.get('public_send',current['public_send']))))
+        if tail=='sender-key': return h.reply(201,registry.rotate_sender_key(mid,account['id']))
+        if tail=='sender-key/revoke':
+            registry.revoke_sender_key(mid,account['id']); return h.reply(200,dict(ok=True))
         if tail=='pairing': return h.reply(200,registry.pairing(mid,account['id']))
         registry.revoke(mid,account['id']); return h.reply(200,dict(ok=True))
     if tail=='claim' and method=='POST' or re.fullmatch(r'messages/[A-Za-z0-9_-]{1,128}/ack',tail) and method=='POST':
@@ -151,3 +152,11 @@ def _dispatch(h,path):
         owner(h,mid); result=registry.queue(mid).status(match[1])
         return h.reply(200 if result else 404,result or dict(error='not_found'))
     raise ServiceError(404,'not_found')
+
+
+def send_text(h, mid):
+    registry=h.server.registry
+    registry.rate('send:'+mid,60)
+    text,key=text_body(h)
+    ident,created=registry.queue(mid).put_text(text,key)
+    return h.reply(201 if created else 200,dict(id=ident,created=created))

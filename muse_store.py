@@ -92,7 +92,12 @@ class Registry:
                 CREATE TABLE IF NOT EXISTS muse_rates (
                     key TEXT NOT NULL, window INTEGER NOT NULL, count INTEGER NOT NULL,
                     PRIMARY KEY(key, window));
+                CREATE TABLE IF NOT EXISTS muse_sender_keys (
+                    muse_id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL,
+                    prefix TEXT NOT NULL, created REAL NOT NULL, version TEXT NOT NULL);
             ''')
+            # Existing public Muses become private; device credentials and queues survive.
+            db.execute('UPDATE muses SET public_send=0 WHERE public_send<>0')
 
     @contextmanager
     def connection(self):
@@ -167,14 +172,14 @@ class Registry:
         with self.connection() as db:
             db.execute('DELETE FROM muse_sessions WHERE token_hash=?', (digest(token),))
 
-    def create(self, owner, name, public_send):
-        self.validate_settings(name, public_send)
+    def create(self, owner, name, public_send=False):
+        self.validate_settings(name, False)
         mid = 'm_' + uuid.uuid4().hex
         with self.connection() as db:
             db.execute('BEGIN IMMEDIATE')
             if db.execute('SELECT count(*) FROM muses WHERE owner=?', (owner,)).fetchone()[0] >= 3:
                 raise ServiceError(429, 'maximum_3_muses_per_account')
-            db.execute('INSERT INTO muses(id,owner,name,public_send,created) VALUES(?,?,?,?,?)', (mid,owner,name.strip(),int(public_send),time.time()))
+            db.execute('INSERT INTO muses(id,owner,name,public_send,created) VALUES(?,?,?,?,?)', (mid,owner,name.strip(),0,time.time()))
         return self.owned(mid, owner)
 
     @staticmethod
@@ -187,7 +192,7 @@ class Registry:
     @staticmethod
     def view(row, owner=False):
         if not row: return None
-        result = dict(id=row['id'], name=row['name'], public_send=bool(row['public_send']))
+        result = dict(id=row['id'], name=row['name'], public_send=False)
         if owner:
             result.update(created=row['created'], device_connected=bool(row['device_hash']),
                           connected_at=row['connected_at'], last_seen=row['last_seen'])
@@ -202,19 +207,51 @@ class Registry:
         with self.connection() as db:
             row = db.execute('SELECT * FROM muses WHERE id=? AND owner=?', (mid, owner)).fetchone()
         if not row: raise ServiceError(404, 'muse_not_found')
-        return self.view(row, True)
+        result=self.view(row, True)
+        result['sender_key']=self.sender_key(mid)
+        return result
 
     def list(self, owner):
         with self.connection() as db:
             rows = db.execute('SELECT * FROM muses WHERE owner=? ORDER BY created', (owner,)).fetchall()
-        return [self.view(row, True) for row in rows]
+        return [dict(self.view(row, True), sender_key=self.sender_key(row['id'])) for row in rows]
 
     def settings(self, mid, owner, name, public_send):
         self.validate_settings(name, public_send)
+        if public_send: raise ServiceError(400, 'public_sending_removed')
         with self.connection() as db:
-            changed = db.execute('UPDATE muses SET name=?,public_send=? WHERE id=? AND owner=?', (name.strip(),int(public_send),mid,owner)).rowcount
+            changed = db.execute('UPDATE muses SET name=?,public_send=? WHERE id=? AND owner=?', (name.strip(),0,mid,owner)).rowcount
             if not changed: raise ServiceError(404, 'muse_not_found')
         return self.owned(mid, owner)
+
+    def sender_key(self, mid):
+        with self.connection() as db:
+            row=db.execute('SELECT prefix,created,version FROM muse_sender_keys WHERE muse_id=?',(mid,)).fetchone()
+        return dict(active=True, **dict(row)) if row else dict(active=False)
+
+    def rotate_sender_key(self, mid, owner):
+        token='mr_send_'+secrets.token_urlsafe(32)
+        created=time.time(); version=uuid.uuid4().hex
+        with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if not db.execute('SELECT 1 FROM muses WHERE id=? AND owner=?',(mid,owner)).fetchone():
+                raise ServiceError(404,'muse_not_found')
+            db.execute('INSERT INTO muse_sender_keys VALUES(?,?,?,?,?) ON CONFLICT(muse_id) DO UPDATE SET token_hash=excluded.token_hash,prefix=excluded.prefix,created=excluded.created,version=excluded.version',
+                       (mid,digest(token),token[:15],created,version))
+        return dict(key=token, sender_key=dict(active=True,prefix=token[:15],created=created,version=version))
+
+    def revoke_sender_key(self, mid, owner):
+        with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if not db.execute('SELECT 1 FROM muses WHERE id=? AND owner=?',(mid,owner)).fetchone():
+                raise ServiceError(404,'muse_not_found')
+            db.execute('DELETE FROM muse_sender_keys WHERE muse_id=?',(mid,))
+
+    def sender(self, token):
+        if not isinstance(token,str) or not re.fullmatch(r'mr_send_[A-Za-z0-9_-]{43}',token): return None
+        with self.connection() as db:
+            row=db.execute('SELECT k.muse_id FROM muse_sender_keys k JOIN muses m ON m.id=k.muse_id WHERE k.token_hash=?',(digest(token),)).fetchone()
+        return row['muse_id'] if row else None
 
     def pairing(self, mid, owner):
         code = secrets.token_hex(8).upper()

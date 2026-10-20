@@ -15,10 +15,10 @@
 | CONSUMER_TOKEN | 위와 서로 다른 긴 무작위 키 |
 | DB_PATH | /data/queue.db |
 | PUBLIC_ORIGIN | 실제 HTTPS 서비스 origin, 끝에 슬래시 없음 |
-| PUBLIC_SEND | 기존 /send를 공개하려면 true, 인증하려면 false |
+| PUBLIC_SEND | 사용 중단. 값과 관계없이 익명 전송은 차단됩니다. |
 | PORT | Railway가 제공하는 포트 |
 
-새 Muse의 공개 수신은 PUBLIC_SEND와 별개로 각 Muse에서 정합니다. 계정·기기 연결키는 서비스가 자동으로 처리합니다. 사용자 가입·로그인·소유자 변경은 PUBLIC_ORIGIN과 일치하는 Origin을 요구하므로 도메인이 바뀌면 함께 변경하세요. 관리 화면의 연결 명령과 다운로드 안내는 현재 서버 주소를 포함합니다. CLI를 직접 실행할 때는 connect의 --server에 자신의 HTTPS origin을 지정하세요.
+새 Muse는 공개 수신을 지원하지 않습니다. 소유자가 송신 API 키를 발급하며 /api/send가 키로 대상 Muse를 찾습니다. 이전 공개 플래그는 배포 시 비활성화됩니다. 기기 연결과 큐는 유지됩니다. 계정·기기 연결키는 서비스가 자동으로 처리합니다. 사용자 가입·로그인·소유자 변경은 PUBLIC_ORIGIN과 일치하는 Origin을 요구하므로 도메인이 바뀌면 함께 변경하세요. 관리 화면의 연결 명령과 다운로드 안내는 현재 서버 주소를 포함합니다. CLI를 직접 실행할 때는 connect의 --server에 자신의 HTTPS origin을 지정하세요.
 
 ## 소스 배포
 
