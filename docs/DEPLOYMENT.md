@@ -18,7 +18,7 @@
 | PUBLIC_SEND | 기존 /send를 공개하려면 true, 인증하려면 false |
 | PORT | Railway가 제공하는 포트 |
 
-새 Muse의 공개 수신은 PUBLIC_SEND와 별개로 각 Muse에서 정합니다. 계정·기기 연결키는 서비스가 자동으로 처리합니다. 사용자 가입·로그인·소유자 변경은 PUBLIC_ORIGIN과 일치하는 Origin을 요구하므로 도메인이 바뀌면 함께 변경하세요. 기본 기기 CLI는 운영 주소를 사용하므로 다른 인스턴스는 connect의 --server에 자신의 HTTPS origin을 지정하세요.
+새 Muse의 공개 수신은 PUBLIC_SEND와 별개로 각 Muse에서 정합니다. 계정·기기 연결키는 서비스가 자동으로 처리합니다. 사용자 가입·로그인·소유자 변경은 PUBLIC_ORIGIN과 일치하는 Origin을 요구하므로 도메인이 바뀌면 함께 변경하세요. 관리 화면의 연결 명령과 다운로드 안내는 현재 서버 주소를 포함합니다. CLI를 직접 실행할 때는 connect의 --server에 자신의 HTTPS origin을 지정하세요.
 
 ## 소스 배포
 
