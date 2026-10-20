@@ -1,18 +1,21 @@
 # Muse Relay
 
-내 컴퓨터·VM에서 실행되는 Muse로 문장을 전달하는 서비스입니다. 사용자마다 전용 웹 전송 페이지와 API 주소를 만들고, 공개 수신을 켜면 송신자는 키 없이 자연어만 보낼 수 있습니다.
+웹·Codex·API에서 받은 문장을 Muse의 클라우드 VM 내부 localhost 수신기로 전달하는 서비스입니다. 여기서 Muse는 Meta AI를 뜻합니다. 연결 프로그램은 Muse의 클라우드 VM 안에서 실행합니다. VM 내부 수신기와 Meta AI가 수신함을 읽고 처리하는 절차는 별도로 구성합니다. 사용자마다 전용 웹 전송 페이지와 API 주소를 만들고, 공개 수신을 켜면 송신자는 키 없이 자연어만 보낼 수 있습니다.
 
 [운영 서비스](https://muse-relay-production-b5b7.up.railway.app/) · [API 문서](https://muse-relay-production-b5b7.up.railway.app/api-docs) · [사용 안내](docs/USER-GUIDE.md)
 
 ## 사용하기
 
 1. 서비스에서 계정을 만들고 Muse를 등록합니다.
-2. 관리 화면의 연결 프로그램을 내려받고, Muse가 실행되는 기기에서 관리 화면에 표시된 `python3 muse_agent.py connect --server 서버주소` 명령을 실행합니다.
-3. 웹에서 생성한 10분 일회용 코드와 실행 중인 localhost 수신기의 URL을 입력합니다.
+2. 관리 화면의 연결 프로그램을 내려받고, Muse의 클라우드 VM 안에서 관리 화면에 표시된 `python3 muse_agent.py connect --server 서버주소` 명령을 실행합니다.
+3. 웹에서 생성한 10분 일회용 코드와 Muse VM 내부에서 실행 중인 localhost 수신기의 URL을 입력합니다.
 4. `python3 muse_agent.py run`으로 폴링을 시작합니다.
-5. Muse 전용 페이지를 공유하거나 ‘Codex·외부 프로그램용 사용법 복사’를 사용합니다.
+5. 관리 화면에서 테스트 문장을 직접 보내고 해당 메시지 ID의 수신기 ACK를 확인합니다. 기기 온라인과 수신기 ACK는 별도 상태이며 Meta AI의 읽기·실행은 관측하지 않습니다.
+6. Muse 전용 페이지를 공유하거나 ‘Codex·외부 프로그램용 사용법 복사’를 사용합니다.
 
-수신 프로그램이 별도로 실행돼 있어야 합니다. HTTP 수신 URL 예: `http://127.0.0.1:18765/inbox`. localhost 인증이 필요하면 connect에 `--local-auth`를 추가합니다. 기기 연결키는 자동 발급되어 로컬 설정 파일에 저장됩니다.
+관리 화면의 체크리스트는 등록 → 기기 연결 → 테스트 문장 접수 → 수신기 ACK 순서입니다. 테스트는 사용자 클릭에만 전송되며, 응답이 불확실하거나 429이면 같은 본문·재시도키를 유지합니다. Muse별 정확한 테스트 메시지 ID는 탭의 sessionStorage에 저장합니다. 새 기기를 연결했다면 새 테스트를 보내세요.
+
+수신 프로그램이 별도로 실행돼 있어야 합니다. Muse VM 내부 HTTP 수신 URL 예: `http://127.0.0.1:18765/inbox`. localhost 인증이 필요하면 connect에 `--local-auth`를 추가합니다. 기기 연결키는 자동 발급되어 로컬 설정 파일에 저장됩니다.
 
 ## 외부 API
 
@@ -25,7 +28,7 @@ Content-Type: text/plain; charset=utf-8
 작업 결과를 정리해서 알려줘.
 ```
 
-공개 수신이면 인증키·로그인·JSON·직접 정하는 ID가 필요 없습니다. 서버가 ID를 만들고 `{"message":"문장"}`으로 감쌉니다. HTTP 201은 서버 접수 확인이며, 기기 수신이나 작업 실행 완료를 뜻하지 않습니다. 외부 웹사이트도 호출할 수 있습니다.
+공개 수신이면 인증키·로그인·JSON·직접 정하는 ID가 필요 없습니다. 서버가 ID를 만들고 `{"message":"문장"}`으로 감쌉니다. HTTP 201은 서버 접수 확인입니다. 서버 접수, localhost 수신기 ACK, Meta AI의 읽기·실행을 각각 구분해야 합니다. 외부 웹사이트도 호출할 수 있습니다.
 
 같은 요청을 재시도할 때는 선택적인 `Idempotency-Key`를 생성해 재사용하세요. 새 요청에 같은 문장을 보내면 별도 메시지로 저장됩니다. 완료 기록과 재시도키는 30일 후 정리됩니다.
 
@@ -51,6 +54,8 @@ python3 server.py
 
 ```sh
 python3 -m unittest discover -s tests -v
+node --check static/muse-test.js
+node --test tests/test_onboarding.cjs
 node --check static/muse.js
 node --check static/app.js
 ```

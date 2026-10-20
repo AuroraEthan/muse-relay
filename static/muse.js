@@ -2,6 +2,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const state = {user:null, mode:'signup', muses:[], selected:null, publicMuse:null, owner:false, refreshing:false, refreshAgain:false, cursor:null, pending:null, sending:false};
+  const connectionTest = new RelayTest({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value)});
   const pathMatch = location.pathname.match(/^\/m\/(m_[a-f0-9]{32})\/?$/);
   const publicId = pathMatch && pathMatch[1];
   const show = (id, yes=true) => $(id).classList.toggle('hidden', !yes);
@@ -32,7 +33,7 @@
   function deviceText(m) { return !m.device_connected?'기기 연결 대기':m.last_seen && Date.now()/1000-m.last_seen<45?'기기 온라인':'기기 응답 대기'; }
   const webUrl = id => `${location.origin}/m/${id}`;
   const apiUrl = id => `${location.origin}/api/muses/${id}/send`;
-  function instructions(m) { return `[${m.name}에 문장 보내기]\nAPI 주소: ${apiUrl(m.id)}\n메서드: POST\nContent-Type: text/plain; charset=utf-8\n본문: 보내고 싶은 문장 그대로\n인증키·로그인·JSON·직접 만드는 ID 불필요 (공개 수신이 켜져 있을 때)\n\nJavaScript 예시:\nconst response = await fetch('${apiUrl(m.id)}', {\n  method: 'POST',\n  headers: {'Content-Type': 'text/plain; charset=utf-8'},\n  body: '작업 결과를 정리해서 알려줘.'\n});\nif (!response.ok) throw new Error('HTTP ' + response.status);\nconsole.log(await response.json());\n\n성공: HTTP 201, {"id":"msg-자동생성값","created":true}\n서버 접수 성공은 Muse 전달·작업 실행 완료를 뜻하지 않습니다.\n문장 최대16KB, 분당60건. 자동 재시도 시에는 같은 요청에만 같은 Idempotency-Key를 사용하세요.\n다른 Codex: 사용자가 보내달라고 요청한 문장을 위 API에 text/plain으로 POST하세요. 스킬 설치가 필요하지 않습니다.\n웹 전송: ${webUrl(m.id)}`; }
+  function instructions(m) { return `[${m.name}에 문장 보내기]\nAPI 주소: ${apiUrl(m.id)}\n메서드: POST\nContent-Type: text/plain; charset=utf-8\n본문: 보내고 싶은 문장 그대로\n인증키·로그인·JSON·직접 만드는 ID 불필요 (공개 수신이 켜져 있을 때)\n\nJavaScript 예시:\nconst response = await fetch('${apiUrl(m.id)}', {\n  method: 'POST',\n  headers: {'Content-Type': 'text/plain; charset=utf-8'},\n  body: '작업 결과를 정리해서 알려줘.'\n});\nif (!response.ok) throw new Error('HTTP ' + response.status);\nconsole.log(await response.json());\n\n성공: HTTP 201, {"id":"msg-자동생성값","created":true}\n서버 접수, localhost 수신기 ACK, Meta AI 읽기·실행은 서로 다릅니다. 읽기·실행은 해당 환경에서 별도로 확인하세요.\n문장 최대16KB, 분당60건. 자동 재시도 시에는 같은 요청에만 같은 Idempotency-Key를 사용하세요.\n다른 Codex: 사용자가 보내달라고 요청한 문장을 위 API에 text/plain으로 POST하세요. 스킬 설치가 필요하지 않습니다.\n웹 전송: ${webUrl(m.id)}`; }
   async function copy(text) {
     try { await navigator.clipboard.writeText(text);notice('복사했습니다. 그대로 붙여넣어 사용하세요.'); }
     catch(_) { const box=$('message-detail');box.textContent=text;$('message-dialog').showModal();notice('자동 복사를 사용할 수 없어 내용을 열었습니다. 선택해서 복사해주세요.'); }
@@ -42,6 +43,13 @@
   $('copy-connect').dataset.copy = connectCommand;
   document.querySelectorAll('[data-copy]').forEach(button=>button.addEventListener('click',()=>copy(button.dataset.copy)));
   function authMode(mode) { state.mode=mode;['signup','login'].forEach(name=>{$(name+'-tab').classList.toggle('selected',name===mode);$(name+'-tab').setAttribute('aria-pressed',String(name===mode));});$('password').autocomplete=mode==='signup'?'new-password':'current-password';$('auth-submit').textContent=mode==='signup'?'계정 만들고 시작하기 ↗':'로그인 ↗';show('auth-help',mode==='signup'); }
+  function revealAuth() {
+    if(publicId||state.user)return;
+    const mode=location.hash==='#login'?'login':location.hash==='#signup'?'signup':null;
+    show('auth-section',Boolean(mode));
+    if(mode){authMode(mode);requestAnimationFrame(()=>{$('auth-section').scrollIntoView({block:'start'});$('username').focus({preventScroll:true});});}
+  }
+  window.addEventListener('hashchange',revealAuth);
   $('signup-tab').addEventListener('click',()=>authMode('signup'));
   $('login-tab').addEventListener('click',()=>authMode('login'));
   $('auth-form').addEventListener('submit',async event=>{
@@ -51,8 +59,8 @@
   });
   $('signout').addEventListener('click',async()=>{try{await api('/api/auth/logout',{method:'POST',body:{}});location.assign('/');}catch(error){notice(error.message,true);}});
   async function renderHome() {
-    show('welcome',!state.user);show('dashboard',Boolean(state.user));show('signout',Boolean(state.user));
-    if(!state.user)return;
+    show('welcome',!state.user);show('dashboard',Boolean(state.user));show('signout',Boolean(state.user));show('nav-login',!state.user);show('nav-start',!state.user);
+    if(!state.user){revealAuth();return;}
     $('account-label').textContent=state.user.username.toUpperCase()+' / WORKSPACE';
     const result=await api('/api/muses');state.muses=result.muses;renderCards();
     if(state.muses.length) await selectMuse(state.selected && state.muses.find(m=>m.id===state.selected.id)||state.muses[0]);
@@ -70,14 +78,31 @@
   async function selectMuse(m) {
     state.selected=m;state.cursor=null;$('history').replaceChildren(el('div','전송 내역을 불러오는 중…','empty'));$('stats').replaceChildren();show('more-history',false);show('pair-code',false);$('pair-value').textContent='';show('manage');renderCards();renderManage();await refresh();
   }
-  function renderManage(){const m=state.selected;$('manage-name').textContent=m.name;$('web-url').textContent=webUrl(m.id);$('api-url').textContent=apiUrl(m.id);$('open-public').href=webUrl(m.id);$('public-setting').checked=m.public_send;$('device-status').textContent=deviceText(m)+(m.last_seen?' · 최근 '+date(m.last_seen):'');$('revoke-device').disabled=!m.device_connected;}
+  function renderManage(){const m=state.selected;$('manage-name').textContent=m.name;$('web-url').textContent=webUrl(m.id);$('api-url').textContent=apiUrl(m.id);$('open-public').href=webUrl(m.id);$('public-setting').checked=m.public_send;$('device-status').textContent=deviceText(m)+(m.last_seen?' · 최근 '+date(m.last_seen):'');$('revoke-device').disabled=!m.device_connected;renderOnboarding();}
+  function renderOnboarding(){
+    const m=state.selected;if(!m)return;const test=connectionTest.read(m.id);
+    const checks=[['Muse 등록',true],['VM 연결',m.device_connected],['테스트 문장 접수',Boolean(test.messageId)],['수신기 ACK',test.status==='acked']];
+    $('onboarding-list').replaceChildren(...checks.map(([label,done],i)=>el('li',(done?'✓':String(i+1).padStart(2,'0'))+'  '+label,done?'done':'')));
+    $('send-test').disabled=test.busy;
+    $('send-test').textContent=test.busy?'접수 확인 중…':test.pending?'같은 테스트 다시 확인 ↗':test.messageId&&test.status!=='acked'?'새 테스트 문장 보내기 ↗':'테스트 문장 보내기 ↗';
+    $('test-status').textContent=test.busy?'테스트 문장의 접수를 확인하는 중입니다…':test.pending?'접수 결과를 확인하지 못했습니다.':test.status==='acked'?'이 테스트 문장의 localhost 수신기 도착 확인 ✓':test.messageId?'테스트 문장을 접수했습니다. 수신기 ACK 대기 중.':'테스트 문장을 아직 보내지 않았습니다.';
+    $('test-detail').textContent=test.pending?'같은 키와 문장으로 다시 확인합니다. 중복 접수를 막습니다.':test.messageId?test.messageId+' · '+(test.status==='acked'?'이 ID의 수신 기록입니다. 새 기기를 연결했다면 새 테스트를 보내세요. Meta AI의 읽기·실행은 별도로 확인하세요.':'기기 온라인이어도 수신기가 응답할 때까지 기다립니다.'):'버튼을 누를 때만 선택한 Muse로 테스트 문장을 보냅니다.';
+  }
+  $('send-test').addEventListener('click',async()=>{
+    if(!state.selected)return;const mid=state.selected.id;
+    const promise=connectionTest.send(mid,request=>api(`/api/muses/${mid}/send`,{method:'POST',body:request.text,plain:true,key:request.key}));renderOnboarding();
+    try{await promise;if(state.selected.id===mid)await refresh();}
+    catch(error){if(state.selected.id===mid)notice(error.message,true);}
+    finally{if(state.selected.id===mid)renderOnboarding();}
+  });
+  $('copy-muse-prompt').addEventListener('click',()=>copy(`Muse(Meta AI)의 클라우드 VM에 Muse Relay를 연결하려고 합니다. 이 클라우드 VM 안에서 연결 프로그램을 실행하고, 외부 웹·Codex·프로그램에서 보낸 문장을 VM 내부 localhost 수신함으로 받아 읽고 처리하고 싶습니다. 먼저 현재 Muse 클라우드 VM에서 실제로 접근할 수 있는 파일, 실행 도구, VM 내부 localhost HTTP/TCP 수신 가능 여부를 확인해주세요. 없는 도구나 권한은 있다고 가정하지 마세요. 가능한 경우 수신기 또는 수신함을 준비하는 방법과 Meta AI가 이를 명시적으로 읽는 절차를 제안해주세요. HTTP 수신기는 JSON의 message를 받고 저장 후 2xx로 응답하며, TCP는 받은 id와 ok:true를 JSON 한 줄로 응답해야 합니다. 메시지 ID로 중복을 방지해주세요. 수신기 성공 응답과 Meta AI의 읽기·실행은 별도로 확인하고, 불가능한 부분은 알려주세요. 비밀번호·연결 코드·기기키·인증값은 요청하거나 출력하지 마세요. 실제 실행이나 변경 전에는 내가 이해할 수 있게 절차를 설명해주세요.`));
   $('copy-web').addEventListener('click',()=>copy(webUrl(state.selected.id)));
   $('copy-api').addEventListener('click',()=>copy(apiUrl(state.selected.id)));
   $('copy-instructions').addEventListener('click',()=>copy(instructions(state.selected)));
   $('copy-pair').addEventListener('click',()=>copy($('pair-value').textContent));
   $('generate-pair').addEventListener('click',async()=>{
     const button=$('generate-pair');button.disabled=true;const mid=state.selected.id;
-    try{const result=await api(`/api/muses/${mid}/pairing`,{method:'POST',body:{}});if(state.selected.id===mid){$('pair-value').textContent=result.code;show('pair-code');notice('10분 안에 기기에서 코드를 입력하세요. 이전에 발급한 미사용 코드는 무효화됩니다.');}}
+    try{const result=await api(`/api/muses/${mid}/pairing`,{method:'POST',body:{}});if(state.selected.id===mid){$('pair-value').textContent=result.code;show('pair-code');notice('10분 안에 Muse 클라우드 VM의 터미널에서 코드를 입력하세요. 이전에 발급한 미사용 코드는 무효화됩니다.');}}
     catch(error){notice(error.message,true);}finally{button.disabled=false;}
   });
   $('revoke-device').addEventListener('click',async()=>{
@@ -88,7 +113,7 @@
   function appendHistory(messages, append=false) {
     const list=$('history');if(!append)list.replaceChildren();
     if(!messages.length&&!append){const empty=el('div','아직 받은 문장이 없습니다. 전송 페이지에서 첫 문장을 보내보세요.','empty');list.append(empty);}
-    for(const m of messages){const row=el('div',undefined,'history-row');const text=el('div');text.append(el('div',m.preview,'history-preview'),el('div',m.id,'history-id'));const button=el('button','보기','quiet');button.addEventListener('click',async()=>{try{$('message-detail').textContent=JSON.stringify(await api(`/api/muses/${state.selected.id}/messages/${m.id}`),null,2);$('message-dialog').showModal();}catch(error){notice(error.message,true);}});row.append(text,el('span',{pending:'대기 중',leased:'기기 가져감',acked:'전달 완료'}[m.status],'status '+m.status),el('span',date(m.created),'history-date'),button);list.append(row);}
+    for(const m of messages){const row=el('div',undefined,'history-row');const text=el('div');text.append(el('div',m.preview,'history-preview'),el('div',m.id,'history-id'));const button=el('button','보기','quiet');button.addEventListener('click',async()=>{try{$('message-detail').textContent=JSON.stringify(await api(`/api/muses/${state.selected.id}/messages/${m.id}`),null,2);$('message-dialog').showModal();}catch(error){notice(error.message,true);}});row.append(text,el('span',{pending:'대기 중',leased:'기기 가져감',acked:'수신기 ACK'}[m.status],'status '+m.status),el('span',date(m.created),'history-date'),button);list.append(row);}
   }
   async function refresh(append=false) {
     if(!state.selected)return;if(state.refreshing){state.refreshAgain=true;return;}state.refreshing=true;const mid=state.selected.id;
@@ -96,7 +121,14 @@
       state.selected=info.muse;state.muses=state.muses.map(m=>m.id===mid?info.muse:m);renderCards();
       // Keep unsaved public setting untouched during background polling.
       $('device-status').textContent=deviceText(info.muse)+(info.muse.last_seen?' · 최근 '+date(info.muse.last_seen):'');$('revoke-device').disabled=!info.muse.device_connected;
-      $('stats').replaceChildren();for(const [key,label] of [['total','전체'],['pending','대기 중'],['leased','가져감'],['acked','전달 완료']]){const item=el('div',undefined,'stat');item.append(el('span',label),el('strong',String(history.stats[key])));$('stats').append(item);}
+      $('stats').replaceChildren();for(const [key,label] of [['total','전체'],['pending','대기 중'],['leased','가져감'],['acked','수신기 ACK']]){const item=el('div',undefined,'stat');item.append(el('span',label),el('strong',String(history.stats[key])));$('stats').append(item);}
+      const test=connectionTest.read(mid);let testLookupError=false;
+      if(test.messageId){
+        try{const message=await api(`/api/muses/${mid}/messages/${test.messageId}`);connectionTest.observe(mid,message);}
+        catch(error){testLookupError=true;}
+      }
+      if(state.selected.id!==mid)return;renderOnboarding();
+      if(testLookupError)$('test-detail').textContent=test.messageId+' · 현재 수신 상태를 확인하지 못했습니다. 다음 갱신에서 다시 확인합니다.';
       appendHistory(history.messages,append);state.cursor=history.next_cursor;show('more-history',Boolean(state.cursor));$('history-meta').textContent='5초마다 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR')+' 확인';
     }catch(error){notice(error.message,true);}finally{state.refreshing=false;if(state.refreshAgain){state.refreshAgain=false;refresh();}}
   }
@@ -116,13 +148,13 @@
     event.preventDefault();if(state.sending)return;const text=state.pending?state.pending.text:$('message').value;
     if(!text.trim()){notice('전달할 문장을 입력해주세요.',true);return;}if(new TextEncoder().encode(text).length>16384){notice(errors.message_limit_16384_bytes,true);return;}
     if(!state.pending)pendingSave({text,key:crypto.randomUUID()});state.sending=true;sendingState();notice('');
-    try{const result=await api(`/api/muses/${publicId}/send`,{method:'POST',body:state.pending.text,plain:true,key:state.pending.key});pendingSave(null);$('message').value='';byteCount();$('receipt').textContent=(result.created?'서버에 접수했습니다.':'이미 접수한 문장입니다. 중복 저장하지 않았습니다.')+'\n'+result.id+'\n기기가 순서대로 가져갑니다. 작업 실행 완료는 별도로 확인해주세요.';show('receipt');}
+    try{const result=await api(`/api/muses/${publicId}/send`,{method:'POST',body:state.pending.text,plain:true,key:state.pending.key});pendingSave(null);$('message').value='';byteCount();$('receipt').textContent=(result.created?'서버에 접수했습니다.':'이미 접수한 문장입니다. 중복 저장하지 않았습니다.')+'\n'+result.id+'\n서버 접수 ≠ localhost 수신기 ACK ≠ Meta AI 실행. 수신기 ACK는 소유자의 관리 화면에서, Meta AI의 읽기·실행은 Muse의 VM 환경에서 확인하세요.';show('receipt');}
     catch(error){if(!error.uncertain&&error.status!==429){pendingSave(null);}notice(error.message+(state.pending?' 같은 요청으로 다시 확인하면 중복 저장되지 않습니다.':''),true);}
     finally{state.sending=false;sendingState();}
   });
   $('abandon-send').addEventListener('click',()=>{if(confirm('이전 문장이 이미 접수됐을 수 있습니다. 새 문장은 별도로 접수됩니다. 계속할까요?')){pendingSave(null);$('message').value='';sendingState();byteCount();notice('');}});
   $('public-copy-api').addEventListener('click',()=>copy(instructions(state.publicMuse)));
-  async function start(){try{try{state.user=(await api('/api/auth/me')).user;}catch(error){if(error.status!==401)throw error;}show('signout',Boolean(state.user));if(publicId)await publicPage();else await renderHome();}catch(error){notice(error.message,true);}finally{show('loading',false);}}
+  async function start(){try{try{state.user=(await api('/api/auth/me')).user;}catch(error){if(error.status!==401)throw error;}show('signout',Boolean(state.user));show('nav-login',!state.user);show('nav-start',!state.user);if(publicId)await publicPage();else await renderHome();}catch(error){notice(error.message,true);}finally{show('loading',false);}}
   setInterval(()=>{if(!document.hidden&&state.user&&!publicId&&!$('manage').classList.contains('hidden'))refresh();},5000);
   start();
 })();
