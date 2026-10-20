@@ -56,7 +56,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
         self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
-        if (self.server.public_send and urlsplit(self.path).path == '/send') or muse_api.SEND_PATH.fullmatch(urlsplit(self.path).path):
+        if urlsplit(self.path).path == '/api/send':
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
             self.send_header('Access-Control-Allow-Headers', 'Content-Type, Idempotency-Key, Authorization')
@@ -126,9 +126,7 @@ class Handler(BaseHTTPRequestHandler):
         if muse_api.dispatch(self):
             return
         if path == '/config' and self.command == 'GET':
-            return self.reply(200, dict(public_send=self.server.public_send, max_message_bytes=MAX_BODY))
-        if path == '/send' and self.command == 'OPTIONS' and self.server.public_send:
-            return self.reply_bytes(204, b'', 'text/plain; charset=utf-8')
+            return self.reply(200, dict(public_send=False, max_message_bytes=MAX_BODY))
         if path == '/session' and self.command == 'GET':
             self.auth('producer')
             return self.reply(200, dict(authenticated=True))
@@ -152,8 +150,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, dict(ok=True, service='vm-connectivity-check',
                               time=datetime.now(timezone.utc).isoformat()))
         if self.command == 'POST' and path == '/send':
-            if not self.server.public_send:
-                self.auth('producer')
+            self.auth('producer')
             if self.headers.get_content_type() != 'text/plain' or self.headers.get_content_charset('utf-8') not in ('utf-8', 'utf8'):
                 raise BadRequest(415, 'expected_utf8_text_plain')
             try:
@@ -243,7 +240,7 @@ def make_server(host, port, db_path, producer_token, consumer_token, lease_secon
     http.queue = queue
     http.registry = Registry(db_path)
     http.public_origin = public_origin
-    http.public_send = public_send
+    http.public_send = False  # Anonymous sending is permanently disabled.
     return http
 
 

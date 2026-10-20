@@ -25,7 +25,7 @@
 <div class="hero">
 <div><span class="eyebrow">YOUR WORDS. A CLEAR WAY THROUGH.</span>
 <h1>Muse의 클라우드 VM에,<br>어디서든 한 문장.</h1>
-<p class="hero-copy">외부 웹에서, Codex에서, 내 프로그램에서.<br>보낸 문장을 모아 Muse의 클라우드 VM으로 전달하세요.</p>
+<p class="hero-copy">외부 프로그램에서, Codex에서, 내 서비스에서.<br>보낸 문장을 모아 Muse의 클라우드 VM으로 전달하세요.</p>
 <div class="hero-actions"><a href="#signup" class="primary">내 Muse 연결하기 ↗</a><a href="#how-it-works" class="text-link">어떻게 연결되나요? ↓</a>
 </div>
 <p class="hero-foot">여기서 Muse는 Meta AI를 뜻합니다.<br>연결 프롬프트를 복사해 Muse에게 붙여넣으세요.</p>
@@ -57,7 +57,7 @@
 <div class="use-list">
 <article><span>01 / 브라우저</span>
 <h3>떠오른 생각을 전송 페이지에</h3>
-<p>Muse별 주소를 열고 문장만 입력하세요. 공개 수신을 켜면 보내는 사람의 로그인은 필요 없습니다.</p>
+<p>소유자 계정으로 로그인해 웹에서 문장을 보내세요. 외부 프로그램은 Muse별 송신 API 키로 연결합니다.</p>
 </article>
 <article><span>02 / Codex</span>
 <h3>다른 작업에서 나온 맥락도</h3>
@@ -74,7 +74,7 @@
 <div class="steps-grid">
 <article><b>01</b>
 <h3>계정과 Muse 만들기</h3>
-<p>이름을 정하고 전용 웹·API 주소를 받으세요. 공개 수신 여부도 직접 선택합니다.</p>
+<p>이름을 정하고 Muse별 송신 API 키를 발급하세요. 공통 API가 키로 대상 Muse를 찾습니다.</p>
 </article>
 <article><b>02</b>
 <h3>프롬프트를 Muse에게 전달하기</h3>
@@ -101,8 +101,8 @@
 <p>Muse와 대화할 수 있으면 시작할 수 있습니다. 프롬프트가 Muse에게 터미널·Python 3.10 이상·네트워크·수신함을 확인하도록 요청합니다. 필요한 도구를 사용할 수 없는 환경이면 Muse가 제약을 알려주도록 안내합니다.</p>
 </details>
 <details>
-<summary>공개 주소를 아는 사람은 누구나 보낼 수 있나요?</summary>
-<p>공개 수신을 켠 경우 그렇습니다. 원하지 않으면 관리 화면에서 끄세요. 전송 내역은 로그인한 소유자만 볼 수 있습니다.</p>
+<summary>어떤 Muse에게 보내는지 어떻게 구분하나요?</summary>
+<p>Muse마다 다른 송신 API 키를 발급합니다. 공통 API에 키와 문장을 보내면 그 키에 연결된 Muse로 전달됩니다. 주소만으로는 보낼 수 없습니다. 송신 키로는 내역 조회나 기기 관리를 할 수 없으며, 소유자가 키를 교체하거나 폐기할 수 있습니다.</p>
 </details>
 <details>
 <summary>VM이 재시작해도 다시 연결되나요?</summary>
@@ -128,7 +128,7 @@
 <ol>
 <li><b>01</b>
 <div><strong>Muse 등록</strong>
-<p>이름을 정하고 전용 주소를 만듭니다.</p>
+<p>이름을 정하고 송신 키를 발급합니다.</p>
 </div>
 </li>
 <li><b>02</b>
@@ -138,7 +138,7 @@
 </li>
 <li><b>03</b>
 <div><strong>문장 보내기</strong>
-<p>공개 주소에 키 없이 문장을 보내면 됩니다.</p>
+<p>송신 API 키와 문장만 보내세요. 서버가 대상 Muse를 찾습니다.</p>
 </div>
 </li>
 </ol>
@@ -159,7 +159,7 @@
 <h2>새 Muse 등록</h2>
 <p class="small">연결할 Muse의 클라우드 VM 이름을 정하세요.</p>
 </div>
-<form id="create-form"><label class="sr-only" for="muse-name">Muse 이름</label><input id="muse-name" maxlength="60" placeholder="예: 작업실 Muse" required><label class="check"><input id="new-public" type="checkbox" checked> 누구나 키 없이 전송 허용</label><button class="primary">Muse 만들기 +</button>
+<form id="create-form"><label class="sr-only" for="muse-name">Muse 이름</label><input id="muse-name" maxlength="60" placeholder="예: 작업실 Muse" required><button class="primary">Muse 만들기 +</button>
 </form>
 </section>
 <div id="muse-cards" class="muse-cards">
@@ -167,7 +167,7 @@
 <div id="empty-muses" class="empty hidden">
 <div class="empty-mark">m↗</div>
 <h2>첫 Muse를 기다리고 있어요.</h2>
-<p>위에서 이름을 정하면 전용 전송 주소가 만들어집니다.</p>
+<p>위에서 Muse를 등록하고 연결 프롬프트와 송신 API 키를 준비하세요.</p>
 </div>
 <section id="manage" class="hidden">
 
@@ -175,7 +175,7 @@
 <div><span class="eyebrow">MUSE DETAILS</span>
 <h2 id="manage-name">
 </h2>
-</div><a id="open-public" class="secondary" target="_blank" rel="noopener">전송 페이지 열기 ↗</a>
+</div><a id="open-public" class="secondary" target="_blank" rel="noopener">소유자 전송 화면 ↗</a>
 </div>
 <div class="manage-grid">
 <div class="panel connect-box">
@@ -215,18 +215,24 @@
 </details>
 </div>
 <div class="panel share-box">
-<div class="step-number">02 / SHARE</div>
-<h2>문장이 도착할 주소</h2>
-<p class="small">공개 수신을 켜면 누구나 키 없이 문장만 보낼 수 있습니다.</p><label>웹 전송 페이지</label>
-<div class="code-row"><code id="web-url"></code><button id="copy-web" class="quiet">복사</button>
-</div><label>외부 프로그램용 API</label>
-<div class="code-row"><code id="api-url"></code><button id="copy-api" class="quiet">복사</button>
-</div>
-<p class="help">POST · Content-Type: text/plain; charset=utf-8<br>본문에 문장만 넣으세요. ID와 JSON은 자동 처리합니다.</p><button id="copy-instructions" class="secondary wide">Codex·외부 프로그램용 사용법 복사</button>
+<div class="step-number">02 / SEND WITH API</div>
+<h2>키와 문장만 보내세요.</h2>
+<p class="small">이 Muse의 송신 API 키로 대상을 구분합니다. 주소만으로는 전송할 수 없습니다.</p>
+<label>공통 API 주소</label>
+<div class="code-row"><code id="api-url"></code><button id="copy-api" class="quiet">주소 복사</button></div>
+<p class="help">POST · Authorization: Bearer 송신키<br>Content-Type: text/plain; charset=utf-8<br>본문에 문장만 넣으세요. 대상 Muse·ID·JSON은 서버가 처리합니다.</p>
 <div class="settings">
-<h3>공개 수신 설정</h3><label class="check"><input id="public-setting" type="checkbox"> 누구나 이 주소로 전송 허용</label>
-<p class="help">끄면 로그인한 소유자만 웹에서 보낼 수 있습니다. 내역 조회는 항상 소유자에게만 허용됩니다.</p><button id="save-settings" class="secondary">설정 저장</button>
+<h3>이 Muse의 송신 API 키</h3>
+<p id="sender-key-status" class="small" role="status">발급 상태 확인 중</p>
+<label class="sr-only" for="sender-key">발급된 송신 API 키</label>
+<input id="sender-key" type="password" readonly autocomplete="off" placeholder="키 원문은 발급 직후에만 복사할 수 있습니다.">
+<p id="sender-key-help" class="help"></p>
+<div class="hero-actions"><button id="issue-sender-key" class="primary" type="button">송신 API 키 발급</button><button id="copy-sender-key" class="secondary" type="button" disabled>키 복사</button><button id="revoke-sender-key" class="quiet danger" type="button" disabled>키 폐기</button></div>
+<p class="help">키는 이 Muse로 전송만 허용합니다. 신뢰하는 송신 프로그램의 비밀 설정에 보관하세요. 키 교체·폐기는 Muse 수신 연결이나 기존 메시지에 영향을 주지 않습니다.</p>
+<button id="copy-instructions" class="secondary wide" type="button" disabled>Codex·외부 프로그램용 사용법 복사 (키 포함)</button>
+<div id="sender-fallback-box" class="hidden"><label for="sender-fallback">직접 복사할 송신 정보 · 비밀 키 포함</label><textarea id="sender-fallback" readonly rows="9" spellcheck="false"></textarea></div>
 </div>
+<details class="connection-detail"><summary>소유자 웹에서 직접 전송</summary><p class="help">로그인한 소유자만 이 Muse에 문장을 보낼 수 있습니다.</p><div class="code-row"><code id="web-url"></code><button id="copy-web" class="quiet">주소 복사</button></div></details>
 </div>
 </div>
 <section class="onboarding" aria-labelledby="onboarding-title">
@@ -272,8 +278,8 @@
 <form id="send-form"><label for="message">전달할 내용</label><textarea id="message" placeholder="작업 결과를 정리해서 알려줘." rows="7" required></textarea>
 <div class="field-meta"><span>입력한 문장을 그대로 전달합니다.</span><span id="byte-count">0 / 16,384 bytes</span>
 </div>
-<div id="private-notice" class="help hidden">공개 수신이 꺼져 있습니다. <a class="text-link" href="/#login">소유자 계정으로 로그인</a>하면 이 페이지에서 전송할 수 있습니다.</div>
-<div class="send-footer"><span id="send-hint" class="small muted">인증키 · JSON · ID 없이 문장만</span><button id="send-button" class="primary">Muse로 전송 ↗</button>
+<div id="private-notice" class="help hidden">소유자 전용 전송 화면입니다. <a class="text-link" href="/#login">소유자 계정으로 로그인</a>하면 이 페이지에서 전송할 수 있습니다.</div>
+<div class="send-footer"><span id="send-hint" class="small muted">소유자 로그인으로 전송 · JSON·ID 불필요</span><button id="send-button" class="primary">Muse로 전송 ↗</button>
 </div><button id="abandon-send" type="button" class="quiet hidden">새 메시지 작성</button>
 <div id="receipt" class="receipt hidden" role="status">
 </div>
@@ -286,7 +292,7 @@
 <li>Muse의 클라우드 VM이 가져감</li>
 <li>VM 내부 localhost 수신함에 전달</li>
 </ol>
-<p class="small muted">기기가 꺼져 있으면 큐에서 기다립니다. 서버 접수는 수신기 ACK와 다릅니다. Meta AI의 읽기·실행은 별도로 확인하세요.</p><button id="public-copy-api" class="secondary wide">API 사용법 복사</button><a class="text-link small" href="/">내 Muse VM도 연결하기 ↗</a>
+<p class="small muted">기기가 꺼져 있으면 큐에서 기다립니다. 서버 접수는 수신기 ACK와 다릅니다. Meta AI의 읽기·실행은 별도로 확인하세요.</p><a class="secondary wide" href="/">관리 화면에서 송신 키 발급</a><a class="text-link small" href="/">내 Muse VM도 연결하기 ↗</a>
 </aside>
 </div>
 </section>
@@ -298,7 +304,7 @@
 <p>Muse를 불러오는 중…</p>
 </div>
 </main>
-<footer class="site-footer"><span>Muse Relay · 문장을 Muse의 VM으로.</span><a href="https://vm-https-check-production.up.railway.app/legacy">기존 VM 전송 ↗</a><span>초기 공개 버전 · 문장 16KB · Muse당 분당 60건</span>
+<footer class="site-footer"><span>Muse Relay · 문장을 Muse의 VM으로.</span><a href="/api-docs">API 사용법 ↗</a><span>초기 공개 버전 · 문장 16KB · Muse당 분당 60건</span>
 </footer>
 <dialog id="message-dialog">
 <div class="panel-heading">

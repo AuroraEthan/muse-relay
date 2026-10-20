@@ -15,28 +15,32 @@
 <header class="doc-heading">
 <div class="eyebrow">MUSE RELAY / DEVELOPER REFERENCE</div>
 <h1>문장 전송을,<br>내 프로그램에서도.</h1>
-<p>공개 Muse 주소에 평문을 POST하세요. Relay 대기열에 접수한 문장을 Muse의 클라우드 VM이 폴링해 VM 내부 localhost 수신기로 전달합니다.</p>
+<p>공통 API에 Muse별 송신 키와 평문을 보내세요. Relay 대기열에 접수한 문장을 Muse의 클라우드 VM이 폴링해 VM 내부 localhost 수신기로 전달합니다.</p>
 </header>
 <div class="docs-layout">
 <nav class="docs-nav" aria-label="API 문서 목차"><a href="#getting-started">시작하기</a><a href="#plain-text">평문 POST</a><a href="#retries">재시도와 중복 방지</a><a href="#receiver">기기·수신기 연결</a><a href="#history">수신 상태·보관</a><a href="#auth">관리·기기 인증</a><a href="#legacy">기존 VM</a><a href="#errors">오류 응답</a>
 </nav>
 <div>
 <section id="getting-started" class="doc-section">
-<h2>1. 내 Muse의 API 주소 받기</h2>
-<p>홈에서 계정과 Muse를 만들고, ‘외부 프로그램용 API’ 주소를 복사하세요. 다른 Codex에 전달할 전체 사용법도 한 번에 복사할 수 있습니다.</p>
-<pre><code>POST /api/muses/{muse_id}/send
+<h2>1. 내 Muse의 송신 API 키 발급</h2>
+<p>홈에서 계정과 Muse를 만들고 ‘송신 API 키 발급’을 누르세요. 발급 직후 ‘Codex·외부 프로그램용 사용법 복사 (키 포함)’로 한 번에 복사할 수 있습니다. 키 원문은 다시 조회할 수 없으므로 안전한 비밀 설정에 보관하세요.</p>
+<pre><code>POST /api/send
+Authorization: Bearer 발급받은송신키
 Content-Type: text/plain; charset=utf-8
 
 작업 결과를 정리해서 알려줘.</code>
 </pre>
-<p>공개 수신을 켠 Muse에는 인증키·로그인·JSON·직접 정하는 ID가 필요 없습니다. 꺼진 경우에는 로그인한 소유자의 웹 전송만 허용됩니다. 주소마다 대상 Muse가 고정되어 다른 기기에 메시지가 섞이지 않습니다.</p><a class="secondary" href="/openapi.json">OpenAPI 3.1 명세 ↗</a>
+<p>서버가 송신 키로 대상 Muse를 찾습니다. Muse ID·JSON·직접 정하는 메시지 ID는 필요 없습니다. 키가 없거나 잘못됐거나 교체·폐기됐다면 HTTP 401입니다. 계정마다 Muse를 따로 관리하고 각 Muse는 서로 다른 송신 키를 사용합니다. 공개 수신은 지원하지 않습니다.</p><a class="secondary" href="/openapi.json">OpenAPI 3.1 명세 ↗</a>
 </section>
 <section id="plain-text" class="doc-section">
-<h2>2. JavaScript에서 보내기</h2>
-<pre><code>const endpoint = '여기에 내 Muse의 API 주소 붙여넣기';
+<h2>2. JavaScript 서버에서 보내기</h2>
+<pre><code>const endpoint = process.env.MUSE_API_URL; // 관리 화면의 공통 API 주소
 const response = await fetch(endpoint, {
   method: 'POST',
-  headers: {'Content-Type': 'text/plain; charset=utf-8'},
+  headers: {
+    'Authorization': 'Bearer ' + process.env.MUSE_API_KEY,
+    'Content-Type': 'text/plain; charset=utf-8'
+  },
   body: '작업 결과를 정리해서 알려줘.'
 });
 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -46,7 +50,7 @@ console.log(await response.json());</code>
 <pre><code>{"id":"msg-자동생성값","created":true}</code>
 </pre>
 <ul>
-<li>공개 송신 API는 외부 웹사이트의 호출도 허용합니다(CORS). 인증 쿠키는 보내지 마세요. 관리 API와 기기 API의 인증은 아래 별도 절을 따릅니다.</li>
+<li>송신 API는 Authorization 헤더를 포함한 CORS를 허용합니다. 쿠키는 보내지 마세요. 키를 공개 프런트엔드 코드·URL·로그에 넣지 말고 신뢰하는 실행 환경의 MUSE_API_KEY로 보관하세요. 관리 API와 기기 API의 인증은 별도입니다.</li>
 <li>문장은 UTF-8 기준 최대 16,384 bytes이며, 빈 문장은 거절합니다.</li>
 <li>Muse마다 분당 60건, 미전달 메시지 최대 1,000개입니다. 초과 시 HTTP 429가 반환됩니다.</li>
 <li>응답은 서버 접수 확인입니다. 기기 수신이나 Muse 작업 실행 완료를 뜻하지 않습니다.</li>
@@ -78,20 +82,24 @@ console.log(await response.json());</code>
 </section>
 <section id="auth" class="doc-section">
 <h2>관리·기기 API</h2>
-<p>관리 API는 HttpOnly muse_session 쿠키로 인증합니다. 쓰기 요청은 같은 Origin의 application/json이어야 합니다. 공개 송신자에게 관리 쿠키나 기기키를 배포하지 마세요.</p>
+<p>관리 API는 HttpOnly muse_session 쿠키로 인증합니다. 쓰기 요청은 같은 Origin의 application/json이어야 합니다. 외부 송신자에게는 송신 키만 전달하세요. 관리 쿠키나 기기키를 배포하지 마세요. 송신 키는 전송만 허용하며 내역 조회·기기 claim/ack·키 관리는 허용하지 않습니다.</p>
 <pre><code>POST /api/auth/signup   {"username":"사용자명","password":"12자이상"}
 POST /api/auth/login    {"username":"사용자명","password":"비밀번호"}
 GET  /api/auth/me
 POST /api/auth/logout  {}
 GET  /api/muses
-POST /api/muses        {"name":"내 Muse","public_send":true}
+POST /api/muses        {"name":"내 Muse"}
 GET  /api/muses/{muse_id}
-POST /api/muses/{muse_id}/settings       {"public_send":false}
+POST /api/muses/{muse_id}/settings       {"name":"새 이름"}
+POST /api/muses/{muse_id}/sender-key     {}  // 최초 발급·교체
+POST /api/muses/{muse_id}/sender-key/revoke {}
+POST /api/muses/{muse_id}/send           // 소유자 웹 전송: 같은 Origin의 text/plain
 GET  /api/muses/{muse_id}/messages?limit=25&amp;before=커서
 GET  /api/muses/{muse_id}/messages/{id}
 POST /api/muses/{muse_id}/pairing        {}
 POST /api/muses/{muse_id}/device/revoke  {}</code>
 </pre>
+<p>송신 키 원문은 발급 응답의 key에 한 번만 반환하며 서버에는 해시만 저장합니다. Muse당 활성 키는 하나입니다. 교체 즉시 이전 키는 무효화되며 폐기하면 외부 전송이 중단됩니다. 기기 연결과 대기 메시지는 유지됩니다. 다른 Muse를 선택하거나 페이지를 새로고침하면 발급 원문은 지워집니다. 키를 잃어버렸다면 교체 후 모든 송신 프로그램의 설정을 갱신하세요.</p>
 <p>다음은 연결 프로그램 전용입니다. 코드 교환 후 발급받은 Bearer 기기키는 해당 Muse의 claim·ack만 허용합니다.</p>
 <pre><code>POST /api/pair  {"code":"10분연결코드"}
 POST /api/muses/{muse_id}/claim  {}
@@ -99,20 +107,15 @@ POST /api/muses/{muse_id}/messages/{id}/ack  {"lease_token":"점유토큰"}</cod
 </pre>
 </section>
 <section id="legacy" class="doc-section">
-<h2>기존 단일 VM API도 유지됩니다</h2>
-<p>기존에 안내한 아래 주소는 원래 VM으로 계속 전달합니다. 새 Muse를 등록해도 기존 VM 설정을 바꿀 필요가 없습니다.</p>
-<pre><code>POST https://vm-https-check-production.up.railway.app/send
-Content-Type: text/plain; charset=utf-8
-
-VM에 보낼 문장</code>
-</pre>
-<p>현재 기존 /send도 키 없이 사용할 수 있습니다. /messages 내역은 기존 관리자 인증, /claim과 /messages/{id}/ack는 기존 VM키를 사용합니다.</p><a class="secondary" href="https://vm-https-check-production.up.railway.app/legacy">기존 VM 전송 화면 ↗</a>
+<h2>기존 주소에서 전환하기</h2>
+<p>이 서비스의 기존 Muse별 공개 전송은 종료됐습니다. 기존 전용 주소를 호출하던 외부 프로그램은 공통 <code>POST /api/send</code>와 Muse별 송신 키로 변경하세요. Muse의 수신 연결과 대기 메시지는 유지됩니다. 기존 Muse별 send는 같은 Origin의 로그인한 소유자 웹 전송에만 사용합니다.</p>
+<p>이 배포의 단일 VM <code>/send</code>도 기존 producer 인증이 필요합니다. 별도로 배포된 이전 VM 서비스는 이 배포의 대상이 아닙니다.</p>
 </section>
 <section id="errors" class="doc-section">
 <h2>오류 응답</h2>
 <ul>
 <li>400: 비어 있는 문장이나 잘못된 입력</li>
-<li>401: 로그인·기기 인증 필요 또는 만료된 연결 코드</li>
+<li>401: 송신 키 누락·오류·폐기, 로그인·기기 인증 필요 또는 만료된 연결 코드</li>
 <li>403: 관리 요청 Origin 확인</li>
 <li>404: 대상 없음 또는 소유자가 아닌 관리 요청</li>
 <li>409: 사용자 이름 중복·재시도키 본문 충돌·유효하지 않은 점유</li>

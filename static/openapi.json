@@ -3,7 +3,7 @@
   "info": {
     "title": "Muse Relay API",
     "version": "2.0.0",
-    "description": "Self-service Muse registration and isolated plain-text relay. Legacy VM endpoints retained."
+    "description": "Muse-scoped sender keys and a common authenticated plain-text API. Anonymous delivery is disabled."
   },
   "servers": [
     {
@@ -632,7 +632,14 @@
     "/send": {
       "post": {
         "summary": "Send natural-language text; server assigns ID and VM JSON envelope",
-        "security": [],
+        "security": [
+          {
+            "producerAuth": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -703,7 +710,7 @@
             "description": "Storage unavailable; retry with same automatic key"
           }
         },
-        "description": "Temporarily public while PUBLIC_SEND=true: anyone may send a sentence without cookies or Authorization. History and VM claim/ack remain authenticated. When PUBLIC_SEND=false, producer authentication is required again."
+        "description": "Legacy producer-authenticated text send. PUBLIC_SEND no longer enables anonymous sending."
       }
     },
     "/session": {
@@ -1044,10 +1051,6 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 60
-                  },
-                  "public_send": {
-                    "type": "boolean",
-                    "default": true
                   }
                 }
               }
@@ -1069,8 +1072,12 @@
         }
       ],
       "get": {
-        "summary": "Public Muse name/settings; device info only for owner",
-        "security": [],
+        "summary": "Read owned Muse and sender key metadata (never the secret)",
+        "security": [
+          {
+            "museSession": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success"
@@ -1149,9 +1156,6 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 60
-                  },
-                  "public_send": {
-                    "type": "boolean"
                   }
                 }
               }
@@ -1523,8 +1527,12 @@
         }
       ],
       "post": {
-        "summary": "Send natural-language text to this Muse",
-        "security": [],
+        "summary": "Owner web compose and test only",
+        "security": [
+          {
+            "museSession": []
+          }
+        ],
         "responses": {
           "201": {
             "description": "Success"
@@ -1557,7 +1565,7 @@
             "description": "Expected UTF-8 text/plain"
           }
         },
-        "description": "Anonymous when public_send=true; otherwise same-origin owner session required. UTF-8 maximum16KiB, 60 requests/minute/Muse, 1000 pending. ID and JSON wrapping automatic. Receipt does not confirm execution.",
+        "description": "Same-Origin owner cookie required. No public sending, even for previously public Muses. External clients use /api/send with a sender key.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1579,15 +1587,6 @@
                 "description": "UTF-8 <= 16384 bytes"
               }
             }
-          }
-        }
-      },
-      "options": {
-        "summary": "Public CORS preflight",
-        "security": [],
-        "responses": {
-          "204": {
-            "description": "CORS allowed for text sender; credentials excluded"
           }
         }
       }
@@ -1639,6 +1638,192 @@
           }
         }
       }
+    },
+    "/api/send": {
+      "post": {
+        "summary": "Send text to the Muse resolved by the sender API key",
+        "security": [
+          {
+            "senderAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Origin mismatch"
+          },
+          "404": {
+            "description": "Not found or not owned"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Rate or storage limit"
+          },
+          "200": {
+            "description": "Already accepted same key and body"
+          },
+          "413": {
+            "description": "Too large"
+          },
+          "415": {
+            "description": "Expected UTF-8 text/plain"
+          }
+        },
+        "description": "UTF-8 text/plain <=16384 bytes; key determines target, no Muse ID or JSON required. 60 requests/minute/Muse, 1000 pending. Receipt is not execution confirmation.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string",
+                "minLength": 1,
+                "description": "UTF-8 <= 16384 bytes"
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for bearer-authenticated sending",
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "CORS allowed for text sender; credentials excluded"
+          }
+        }
+      }
+    },
+    "/api/muses/{muse_id}/sender-key": {
+      "parameters": [
+        {
+          "name": "muse_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^m_[a-f0-9]{32}$"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Issue or replace sender key (secret returned once)",
+        "security": [
+          {
+            "museSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "key",
+                    "sender_key"
+                  ],
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^mr_send_[A-Za-z0-9_-]{43}$",
+                      "description": "Copy now; never returned by read APIs."
+                    },
+                    "sender_key": {
+                      "$ref": "#/components/schemas/SenderKeyMetadata"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Same Origin required"
+          },
+          "404": {
+            "description": "Not owned or missing"
+          }
+        }
+      }
+    },
+    "/api/muses/{muse_id}/sender-key/revoke": {
+      "parameters": [
+        {
+          "name": "muse_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^m_[a-f0-9]{32}$"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Revoke sender key",
+        "security": [
+          {
+            "museSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Same Origin required"
+          },
+          "404": {
+            "description": "Not owned or missing"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1669,6 +1854,11 @@
         "type": "http",
         "scheme": "bearer",
         "description": "Scoped to one Muse claim/ack; obtained by one-time pairing."
+      },
+      "senderAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Send-only API key for exactly one Muse. Returned only at issuance; rotation/revocation invalidates old keys."
       }
     },
     "schemas": {
@@ -1811,6 +2001,26 @@
           },
           "attempts": {
             "type": "integer"
+          }
+        }
+      },
+      "SenderKeyMetadata": {
+        "type": "object",
+        "required": [
+          "active"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "created": {
+            "type": "number"
+          },
+          "version": {
+            "type": "string"
           }
         }
       }

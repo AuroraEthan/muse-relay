@@ -5,6 +5,9 @@
   const connectionPrompts = new ConnectionPrompts();
   const setupJobs = new Set();
   let setupSelection = 0;
+  let senderSecret = null;
+  let senderMutation = 0;
+  const senderJobs = new Set();
   const connectionTest = new RelayTest({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value)});
   const pathMatch = location.pathname.match(/^\/m\/(m_[a-f0-9]{32})\/?$/);
   const publicId = pathMatch && pathMatch[1];
@@ -18,7 +21,7 @@
     rate_limit_try_again_later:'잠시 후 다시 시도해주세요. 요청이 너무 많습니다.', maximum_3_muses_per_account:'계정당 Muse는 최대 3개입니다.',
     muse_pending_limit_1000:'대기 메시지가 1,000개입니다. 연결된 기기가 처리한 뒤 다시 보내주세요.',
     muse_name_1_to_60_characters:'Muse 이름은 1–60자로 입력해주세요.', message_limit_16384_bytes:'문장은 UTF-8 기준 16KB까지 보낼 수 있습니다.',
-    message_text_required:'전달할 문장을 입력해주세요.', muse_not_found:'Muse를 찾을 수 없습니다.', same_origin_required:'페이지를 새로고침한 뒤 다시 시도해주세요.'
+    message_text_required:'전달할 문장을 입력해주세요.', muse_not_found:'Muse를 찾을 수 없습니다.', same_origin_required:'페이지를 새로고침한 뒤 다시 시도해주세요.', invalid_sender_key:'송신 API 키가 없거나 유효하지 않습니다.', public_sending_removed:'공개 수신은 지원하지 않습니다.'
   };
   async function api(path, {method='GET',body,plain=false,key}={}) {
     const headers={};
@@ -35,8 +38,76 @@
   function date(time) { return time?new Date(time*1000).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'아직 없음'; }
   function deviceText(m) { return !m.device_connected?'기기 연결 대기':m.last_seen && Date.now()/1000-m.last_seen<45?'기기 온라인':'기기 응답 대기'; }
   const webUrl = id => `${location.origin}/m/${id}`;
-  const apiUrl = id => `${location.origin}/api/muses/${id}/send`;
-  function instructions(m) { return `[${m.name}에 문장 보내기]\nAPI 주소: ${apiUrl(m.id)}\n메서드: POST\nContent-Type: text/plain; charset=utf-8\n본문: 보내고 싶은 문장 그대로\n인증키·로그인·JSON·직접 만드는 ID 불필요 (공개 수신이 켜져 있을 때)\n\nJavaScript 예시:\nconst response = await fetch('${apiUrl(m.id)}', {\n  method: 'POST',\n  headers: {'Content-Type': 'text/plain; charset=utf-8'},\n  body: '작업 결과를 정리해서 알려줘.'\n});\nif (!response.ok) throw new Error('HTTP ' + response.status);\nconsole.log(await response.json());\n\n성공: HTTP 201, {"id":"msg-자동생성값","created":true}\n서버 접수, localhost 수신기 ACK, Meta AI 읽기·실행은 서로 다릅니다. 읽기·실행은 해당 환경에서 별도로 확인하세요.\n문장 최대16KB, 분당60건. 자동 재시도 시에는 같은 요청에만 같은 Idempotency-Key를 사용하세요.\n다른 Codex: 사용자가 보내달라고 요청한 문장을 위 API에 text/plain으로 POST하세요. 스킬 설치가 필요하지 않습니다.\n웹 전송: ${webUrl(m.id)}`; }
+  const apiUrl = () => `${location.origin}/api/send`;
+  function instructions(m, key) { return `[${m.name}에 문장 보내기]
+API 주소: ${apiUrl()}
+메서드: POST
+Authorization: Bearer ${key}
+Content-Type: text/plain; charset=utf-8
+본문: 보내고 싶은 문장 그대로
+
+서버가 API 키로 대상 Muse를 찾습니다. Muse ID·JSON·직접 만드는 메시지 ID는 필요 없습니다.
+이 키는 이 Muse로 전송만 허용합니다. 공개 게시물이나 브라우저 프런트엔드 소스에 넣지 말고, 신뢰하는 송신 프로그램의 비밀 설정에 보관하세요.
+
+JavaScript (서버 또는 신뢰하는 실행 환경):
+const response = await fetch('${apiUrl()}', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer ' + process.env.MUSE_API_KEY,
+    'Content-Type': 'text/plain; charset=utf-8'
+  },
+  body: '작업 결과를 정리해서 알려줘.'
+});
+if (!response.ok) throw new Error('HTTP ' + response.status);
+console.log(await response.json());
+위 키를 실행 환경의 MUSE_API_KEY에 저장하세요.
+
+성공: HTTP 201, {"id":"msg-자동생성값","created":true}
+HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 키를 받으세요.
+서버 접수, localhost 수신기 ACK, Meta AI 읽기·실행은 서로 다릅니다.
+문장 최대 16KB, Muse당 분당 60건. 자동 재시도는 같은 본문과 같은 Idempotency-Key로 하세요. 키 교체로 대상 Muse는 바뀌지 않습니다.
+다른 Codex: 사용자가 보내달라고 요청한 문장을 위 API로 POST하세요. 인증키는 Authorization 헤더에만 넣고 URL·본문·로그에는 출력하지 마세요. 스킬 설치는 필요하지 않습니다.`; }
+  function clearSenderSecret() {
+    senderSecret=null;$('sender-key').value='';$('sender-fallback').value='';show('sender-fallback-box',false);
+  }
+  function renderSender() {
+    const m=state.selected;if(!m)return;
+    const meta=m.sender_key||{active:false};
+    if(senderSecret&&(senderSecret.mid!==m.id||senderSecret.version!==meta.version))clearSenderSecret();
+    const available=Boolean(senderSecret);
+    $('sender-key').value=available?senderSecret.key:'';
+    $('sender-key-status').textContent=meta.active?`발급됨 · ${meta.prefix}… · ${date(meta.created)}`:'발급된 송신 키가 없습니다.';
+    $('issue-sender-key').textContent=senderJobs.has(m.id)?'키 발급 확인 중…':meta.active?'송신 키 교체':'송신 API 키 발급';
+    $('issue-sender-key').disabled=senderJobs.has(m.id);
+    $('revoke-sender-key').disabled=!meta.active||senderJobs.has(m.id);
+    $('copy-sender-key').disabled=!available||senderJobs.has(m.id);
+    $('copy-instructions').disabled=!available||senderJobs.has(m.id);
+    $('sender-key-help').textContent=available?'지금 키와 사용법을 복사해 안전하게 보관하세요. 페이지를 새로고침하거나 다른 Muse를 선택하면 원문을 다시 볼 수 없습니다.':'키 원문은 발급 직후에만 복사할 수 있습니다. 보관한 키를 잃어버리면 교체하세요. 기존 키는 교체 즉시 사용할 수 없습니다.';
+  }
+  async function copySender(text) {
+    const mid=state.selected.id, epoch=setupSelection, secret=senderSecret, mutation=senderMutation;
+    const unchanged=()=>state.selected?.id===mid&&setupSelection===epoch&&senderSecret===secret&&senderMutation===mutation;
+    try{await navigator.clipboard.writeText(text);if(unchanged())notice('송신 정보를 복사했습니다. 신뢰하는 프로그램에만 전달하세요.');}
+    catch(_){if(!unchanged()||!senderSecret)return;$('sender-fallback').value=text;show('sender-fallback-box');$('sender-fallback').focus();$('sender-fallback').select();notice('자동 복사가 차단됐습니다. 아래 선택된 내용을 복사하세요.');}
+  }
+  async function changeSender(revoke=false) {
+    const m=state.selected;if(!m||senderJobs.has(m.id))return;
+    if((revoke||m.sender_key?.active)&&!confirm(revoke?'송신 키를 폐기할까요? 이 키를 쓰는 프로그램은 즉시 전송할 수 없게 됩니다. Muse 연결과 기존 메시지는 유지됩니다.':'송신 키를 교체할까요? 기존 키를 쓰는 프로그램의 키도 바꿔야 합니다. Muse 연결은 유지됩니다.'))return;
+    const mid=m.id,epoch=setupSelection;senderMutation++;senderJobs.add(mid);clearSenderSecret();renderSender();
+    try {
+      const result=await api(`/api/muses/${mid}/sender-key${revoke?'/revoke':''}`,{method:'POST',body:{}});
+      const meta=revoke?{active:false}:result.sender_key;
+      state.muses=state.muses.map(item=>item.id===mid?{...item,sender_key:meta}:item);
+      if(state.selected?.id!==mid||setupSelection!==epoch){notice('송신 키 변경을 완료했습니다. 해당 Muse를 다시 선택해 상태를 확인하세요. 키 원문을 보관하지 못했다면 교체하세요.');return;}
+      state.selected={...state.selected,sender_key:meta};
+      if(!revoke)senderSecret={mid,key:result.key,version:meta.version};
+      notice(revoke?'송신 키를 폐기했습니다.':'송신 API 키를 발급했습니다. 지금 복사해 보관하세요.');
+    }catch(error){if(state.selected?.id===mid&&setupSelection===epoch)notice(error.message+(error.uncertain?' 키 변경이 반영됐을 수 있습니다. 상태를 확인하고 원문을 받지 못했다면 다시 교체하세요.':''),true);}
+    finally{senderMutation++;senderJobs.delete(mid);if(state.selected?.id===mid&&setupSelection===epoch){renderSender();refresh();}}
+  }
+  $('issue-sender-key').addEventListener('click',()=>changeSender());
+  $('revoke-sender-key').addEventListener('click',()=>changeSender(true));
+  $('copy-sender-key').addEventListener('click',()=>{if(senderSecret)copySender(senderSecret.key);});
   async function copy(text) {
     try { await navigator.clipboard.writeText(text);notice('복사했습니다. 그대로 붙여넣어 사용하세요.'); }
     catch(_) { const box=$('message-detail');box.textContent=text;$('message-dialog').showModal();notice('자동 복사를 사용할 수 없어 내용을 열었습니다. 선택해서 복사해주세요.'); }
@@ -71,17 +142,17 @@
   }
   function renderCards() {
     const list=$('muse-cards');list.replaceChildren();show('empty-muses',state.muses.length===0);
-    for(const m of state.muses){const card=el('button',undefined,'muse-card'+(state.selected?.id===m.id?' selected':''));card.type='button';card.setAttribute('aria-pressed',String(state.selected?.id===m.id));const head=el('div',undefined,'card-head');head.append(el('span','m↗','card-avatar'),el('span',m.public_send?'공개 수신':'소유자 전용','pill'));card.append(head,el('span',m.name,'card-name'));const meta=el('span',deviceText(m),'card-meta');card.append(meta);card.addEventListener('click',()=>selectMuse(m).catch(error=>notice(error.message,true)));list.append(card);}
+    for(const m of state.muses){const card=el('button',undefined,'muse-card'+(state.selected?.id===m.id?' selected':''));card.type='button';card.setAttribute('aria-pressed',String(state.selected?.id===m.id));const head=el('div',undefined,'card-head');head.append(el('span','m↗','card-avatar'),el('span','API 키 인증','pill'));card.append(head,el('span',m.name,'card-name'));const meta=el('span',deviceText(m),'card-meta');card.append(meta);card.addEventListener('click',()=>selectMuse(m).catch(error=>notice(error.message,true)));list.append(card);}
   }
   $('create-form').addEventListener('submit',async event=>{
     event.preventDefault();const button=event.currentTarget.querySelector('button');button.disabled=true;
-    try { const {muse}=await api('/api/muses',{method:'POST',body:{name:$('muse-name').value,public_send:$('new-public').checked}});$('muse-name').value='';state.selected=muse;await renderHome();notice('Muse를 만들었습니다. 연결 프롬프트를 복사해 Muse 대화에 붙여넣으세요.');$('copy-muse-prompt').focus(); }
+    try { const {muse}=await api('/api/muses',{method:'POST',body:{name:$('muse-name').value}});$('muse-name').value='';state.selected=muse;await renderHome();notice('Muse를 만들었습니다. 연결 프롬프트를 복사해 Muse 대화에 붙여넣으세요.');$('copy-muse-prompt').focus(); }
     catch(error){notice(error.message,true);}finally{button.disabled=false;}
   });
   async function selectMuse(m) {
-    setupSelection++;state.selected=m;state.cursor=null;$('history').replaceChildren(el('div','전송 내역을 불러오는 중…','empty'));$('stats').replaceChildren();show('more-history',false);show('pair-code',false);$('pair-value').textContent='';show('manage');renderCards();renderManage();await refresh();
+    setupSelection++;clearSenderSecret();state.selected=m;state.cursor=null;$('history').replaceChildren(el('div','전송 내역을 불러오는 중…','empty'));$('stats').replaceChildren();show('more-history',false);show('pair-code',false);$('pair-value').textContent='';show('manage');renderCards();renderManage();await refresh();
   }
-  function renderManage(){const m=state.selected;$('manage-name').textContent=m.name;$('web-url').textContent=webUrl(m.id);$('api-url').textContent=apiUrl(m.id);$('open-public').href=webUrl(m.id);$('public-setting').checked=m.public_send;$('device-status').textContent=deviceText(m)+(m.last_seen?' · 최근 '+date(m.last_seen):'');$('revoke-device').disabled=!m.device_connected;renderOnboarding();renderSetup();}
+  function renderManage(){const m=state.selected;$('manage-name').textContent=m.name;$('web-url').textContent=webUrl(m.id);$('api-url').textContent=apiUrl(m.id);$('open-public').href=webUrl(m.id);$('device-status').textContent=deviceText(m)+(m.last_seen?' · 최근 '+date(m.last_seen):'');$('revoke-device').disabled=!m.device_connected;renderOnboarding();renderSetup();renderSender();}
   function renderOnboarding(){
     const m=state.selected;if(!m)return;const test=connectionTest.read(m.id);
     const checks=[['Muse 등록',true],['VM 연결',m.device_connected],['테스트 문장 접수',Boolean(test.messageId)],['수신기 ACK',test.status==='acked']];
@@ -148,7 +219,7 @@
   });
   $('copy-web').addEventListener('click',()=>copy(webUrl(state.selected.id)));
   $('copy-api').addEventListener('click',()=>copy(apiUrl(state.selected.id)));
-  $('copy-instructions').addEventListener('click',()=>copy(instructions(state.selected)));
+  $('copy-instructions').addEventListener('click',()=>{if(senderSecret)copySender(instructions(state.selected,senderSecret.key));});
   $('copy-pair').addEventListener('click',()=>{const muse=state.selected,record=connectionPrompts.current(muse);if(record)copySetupText(record.code,muse,record);else renderSetup();});
   $('generate-pair').addEventListener('click',()=>prepareSetup(false,true));
   $('revoke-device').addEventListener('click',async()=>{
@@ -156,17 +227,16 @@
     const mid=state.selected.id;
     try{await api(`/api/muses/${mid}/device/revoke`,{method:'POST',body:{}});connectionPrompts.invalidate(mid);if(state.selected.id===mid){renderSetup();await refresh();notice('기기 연결을 해제했습니다.');}}catch(error){if(state.selected.id===mid)notice(error.message,true);}
   });
-  $('save-settings').addEventListener('click',async()=>{const button=$('save-settings');button.disabled=true;const mid=state.selected.id;try{const {muse}=await api(`/api/muses/${mid}/settings`,{method:'POST',body:{public_send:$('public-setting').checked}});state.muses=state.muses.map(m=>m.id===muse.id?muse:m);if(state.selected.id===mid){state.selected=muse;renderManage();}renderCards();notice('공개 수신 설정을 저장했습니다.');}catch(error){notice(error.message,true);}finally{button.disabled=false;}});
   function appendHistory(messages, append=false) {
     const list=$('history');if(!append)list.replaceChildren();
     if(!messages.length&&!append){const empty=el('div','아직 받은 문장이 없습니다. 전송 페이지에서 첫 문장을 보내보세요.','empty');list.append(empty);}
     for(const m of messages){const row=el('div',undefined,'history-row');const text=el('div');text.append(el('div',m.preview,'history-preview'),el('div',m.id,'history-id'));const button=el('button','보기','quiet');button.addEventListener('click',async()=>{try{$('message-detail').textContent=JSON.stringify(await api(`/api/muses/${state.selected.id}/messages/${m.id}`),null,2);$('message-dialog').showModal();}catch(error){notice(error.message,true);}});row.append(text,el('span',{pending:'대기 중',leased:'기기 가져감',acked:'수신기 ACK'}[m.status],'status '+m.status),el('span',date(m.created),'history-date'),button);list.append(row);}
   }
   async function refresh(append=false) {
-    if(!state.selected)return;if(state.refreshing){state.refreshAgain=true;return;}state.refreshing=true;const mid=state.selected.id;
+    if(!state.selected)return;if(state.refreshing){state.refreshAgain=true;return;}state.refreshing=true;const mid=state.selected.id;const senderVersion=senderMutation;
     try{const [info,history]=await Promise.all([api('/api/muses/'+mid),api(`/api/muses/${mid}/messages`+(append&&state.cursor?'?before='+state.cursor:''))]);if(state.selected.id!==mid)return;
-      state.selected=info.muse;state.muses=state.muses.map(m=>m.id===mid?info.muse:m);renderCards();
-      // Keep unsaved public setting untouched during background polling.
+      if(senderVersion!==senderMutation||senderJobs.has(mid))info.muse.sender_key=state.selected.sender_key;
+      state.selected=info.muse;renderSender();state.muses=state.muses.map(m=>m.id===mid?info.muse:m);renderCards();
       $('device-status').textContent=deviceText(info.muse)+(info.muse.last_seen?' · 최근 '+date(info.muse.last_seen):'');$('revoke-device').disabled=!info.muse.device_connected;
       $('stats').replaceChildren();for(const [key,label] of [['total','전체'],['pending','대기 중'],['leased','가져감'],['acked','수신기 ACK']]){const item=el('div',undefined,'stat');item.append(el('span',label),el('strong',String(history.stats[key])));$('stats').append(item);}
       const test=connectionTest.read(mid);let testLookupError=false;
@@ -182,12 +252,12 @@
   $('refresh-history').addEventListener('click',()=>refresh());$('more-history').addEventListener('click',()=>refresh(true));
   $('close-dialog').addEventListener('click',()=>$('message-dialog').close());
   function pendingSave(value){state.pending=value;try{if(value)sessionStorage.setItem('muse-pending:'+publicId,JSON.stringify(value));else sessionStorage.removeItem('muse-pending:'+publicId);}catch(_){} }
-  function sendingState(){const pending=Boolean(state.pending);$('message').readOnly=pending;$('send-button').textContent=pending?'같은 요청 다시 확인 ↗':'Muse로 전송 ↗';$('send-button').disabled=state.sending||(!state.publicMuse?.public_send&&!state.owner);show('abandon-send',pending);}
+  function sendingState(){const pending=Boolean(state.pending);$('message').readOnly=pending;$('send-button').textContent=pending?'같은 요청 다시 확인 ↗':'Muse로 전송 ↗';$('send-button').disabled=state.sending||!state.owner;show('abandon-send',pending);}
   async function publicPage(){
-    try{const {muse}=await api('/api/muses/'+publicId);state.publicMuse=muse;state.owner=Boolean(muse.created);show('public-page');$('public-name').textContent=muse.name+'에게 보내기';document.title=muse.name+' · Muse Relay';$('public-badge').textContent=muse.public_send?'누구나 키 없이 전송 가능':'소유자 전용';show('private-notice',!muse.public_send&&!state.owner);$('message').disabled=!muse.public_send&&!state.owner;
+    try{const {muse}=await api('/api/muses/'+publicId);state.publicMuse=muse;state.owner=Boolean(muse.created);show('public-page');$('public-name').textContent=muse.name+'에게 보내기';document.title=muse.name+' · Muse Relay';$('public-badge').textContent='소유자 전용';show('private-notice',!state.owner);$('message').disabled=!state.owner;
       try{const saved=JSON.parse(sessionStorage.getItem('muse-pending:'+publicId));if(saved&&typeof saved.text==='string'&&typeof saved.key==='string'){state.pending=saved;$('message').value=saved.text;notice('이전 전송의 응답을 확인하지 못했습니다. 같은 요청으로 다시 확인할 수 있습니다.');}}catch(_){}
       sendingState();byteCount();
-    }catch(error){if(error.status===404)show('not-found');else notice(error.message,true);}
+    }catch(error){if(error.status===401){show('public-page');show('private-notice');$('public-badge').textContent='소유자 로그인 필요';$('message').disabled=true;sendingState();}else if(error.status===404)show('not-found');else notice(error.message,true);}
   }
   function byteCount(){$('byte-count').textContent=new TextEncoder().encode($('message').value).length.toLocaleString()+' / 16,384 bytes';}
   $('message').addEventListener('input',byteCount);
@@ -200,7 +270,6 @@
     finally{state.sending=false;sendingState();}
   });
   $('abandon-send').addEventListener('click',()=>{if(confirm('이전 문장이 이미 접수됐을 수 있습니다. 새 문장은 별도로 접수됩니다. 계속할까요?')){pendingSave(null);$('message').value='';sendingState();byteCount();notice('');}});
-  $('public-copy-api').addEventListener('click',()=>copy(instructions(state.publicMuse)));
   async function start(){try{try{state.user=(await api('/api/auth/me')).user;}catch(error){if(error.status!==401)throw error;}show('signout',Boolean(state.user));show('nav-login',!state.user);show('nav-start',!state.user);if(publicId)await publicPage();else await renderHome();}catch(error){notice(error.message,true);}finally{show('loading',false);}}
   setInterval(()=>{if(!document.hidden&&state.user&&!publicId&&!$('manage').classList.contains('hidden'))refresh();},5000);
   setInterval(()=>{if(!document.hidden&&state.selected&&!publicId)renderSetup();},1000);
