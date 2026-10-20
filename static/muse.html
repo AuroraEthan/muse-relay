@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/muse.css">
 <script src="/muse-test.js" defer>
 </script>
+<script src="/muse-setup.js" defer></script>
 <script src="/muse.js" defer>
 </script>
 </head>
@@ -27,7 +28,7 @@
 <p class="hero-copy">외부 웹에서, Codex에서, 내 프로그램에서.<br>보낸 문장을 모아 Muse의 클라우드 VM으로 전달하세요.</p>
 <div class="hero-actions"><a href="#signup" class="primary">내 Muse 연결하기 ↗</a><a href="#how-it-works" class="text-link">어떻게 연결되나요? ↓</a>
 </div>
-<p class="hero-foot">여기서 Muse는 Meta AI를 뜻합니다.<br>연결 프로그램은 Muse의 클라우드 VM 안에서 실행합니다.</p>
+<p class="hero-foot">여기서 Muse는 Meta AI를 뜻합니다.<br>연결 프롬프트를 복사해 Muse에게 붙여넣으세요.</p>
 </div>
 <div class="route-illustration">
 <div class="route-top"><span>문장이 이동하는 경로 · 예시</span><span>↗</span>
@@ -46,7 +47,7 @@
 <div><strong>03 / Muse의 클라우드 VM</strong><small>VM 안의 연결 프로그램 → localhost 수신함</small>
 </div>
 </div>
-<p class="illustration-foot">이어서 Muse가 읽을 수 있도록.<br>Meta AI가 수신함을 읽고 처리하도록 별도 설정이 필요합니다.</p>
+<p class="illustration-foot">설정도 Muse에게 자연어로.<br>연결 프롬프트가 환경 확인부터 실행·검증까지 안내합니다.</p>
 </div>
 </div>
 <section class="landing-section use-section" id="use-cases">
@@ -76,8 +77,8 @@
 <p>이름을 정하고 전용 웹·API 주소를 받으세요. 공개 수신 여부도 직접 선택합니다.</p>
 </article>
 <article><b>02</b>
-<h3>Muse의 클라우드 VM 연결하기</h3>
-<p>Muse의 VM 안에서 Python 연결 프로그램에 일회용 코드와 VM 내부 수신 주소를 입력하세요.</p>
+<h3>프롬프트를 Muse에게 전달하기</h3>
+<p>연결 프롬프트를 복사해 붙여넣으세요. Muse가 자신의 환경에서 수신함과 연결 프로그램을 준비하도록 안내합니다.</p>
 </article>
 <article><b>03</b>
 <h3>직접 보내고 도착 확인하기</h3>
@@ -93,11 +94,11 @@
 <div>
 <details>
 <summary>Meta AI 계정을 연결하는 서비스인가요?</summary>
-<p>Meta AI의 공식 계정 연동 서비스가 아닙니다. Muse Relay는 Muse의 클라우드 VM 안에 있는 localhost 수신기까지 문장을 전달합니다. Meta AI가 그 수신함을 읽고 처리하는 방법은 VM 환경에서 따로 구성해야 합니다.</p>
+<p>Muse는 클라우드 환경에서 작업하는 AI 인터페이스입니다. 당신은 연결 프롬프트를 Muse에게 전달하고, Muse는 자신의 환경을 확인해 수신함과 연결 프로그램을 준비합니다. Relay는 문장을 그 수신함으로 전달합니다. 실제 Muse의 읽기·작업 결과는 Muse에게 확인하세요.</p>
 </details>
 <details>
 <summary>미리 준비할 것은 무엇인가요?</summary>
-<p>Muse의 클라우드 VM 안에 Python 3.10 이상과 HTTP 또는 TCP 수신기가 필요합니다. localhost 주소는 해당 VM 내부를 가리킵니다. 연결 프로그램에는 추가 Python 패키지가 필요 없습니다.</p>
+<p>Muse와 대화할 수 있으면 시작할 수 있습니다. 프롬프트가 Muse에게 터미널·Python 3.10 이상·네트워크·수신함을 확인하도록 요청합니다. 필요한 도구를 사용할 수 없는 환경이면 Muse가 제약을 알려주도록 안내합니다.</p>
 </details>
 <details>
 <summary>공개 주소를 아는 사람은 누구나 보낼 수 있나요?</summary>
@@ -150,7 +151,7 @@
 <div>
 <div class="eyebrow" id="account-label">YOUR WORKSPACE</div>
 <h1>나의 Muse</h1>
-<p>Muse의 클라우드 VM을 연결하고 첫 문장의 도착을 확인하세요.</p>
+<p>프롬프트를 Muse에게 전달하고 첫 문장의 도착을 확인하세요.</p>
 </div><span class="pill">계정당 Muse 3개</span>
 </div>
 <section class="panel new-muse">
@@ -169,19 +170,7 @@
 <p>위에서 이름을 정하면 전용 전송 주소가 만들어집니다.</p>
 </div>
 <section id="manage" class="hidden">
-<section class="onboarding" aria-labelledby="onboarding-title">
-<div><span class="eyebrow">YOUR FIRST DELIVERY</span>
-<h2 id="onboarding-title">첫 문장의 도착까지, 한 단계씩.</h2>
-<p>기기 온라인과 수신기 도착은 서로 다른 상태입니다.</p>
-</div>
-<ol id="onboarding-list" class="onboarding-list">
-</ol>
-<div class="test-line">
-<div><strong id="test-status" role="status" aria-live="polite">테스트 문장을 아직 보내지 않았습니다.</strong>
-<p id="test-detail">버튼을 누를 때만 선택한 Muse로 테스트 문장을 보냅니다.</p>
-</div><button id="send-test" class="primary" type="button">테스트 문장 보내기 ↗</button>
-</div>
-</section>
+
 <div class="section-title">
 <div><span class="eyebrow">MUSE DETAILS</span>
 <h2 id="manage-name">
@@ -190,32 +179,39 @@
 </div>
 <div class="manage-grid">
 <div class="panel connect-box">
-<div class="step-number">01 / CONNECT</div>
-<h2>Muse의 클라우드 VM 연결</h2>
-<p class="small">아래 명령은 Muse의 클라우드 VM 안에서 실행하세요.</p>
-<ol class="setup">
-<li><a class="text-link" href="/downloads/muse-agent.zip">연결 프로그램 다운로드 ↓</a><span>Muse의 클라우드 VM 안에서 압축을 풀고 터미널로 해당 폴더를 여세요. Python 3.10 이상이 필요합니다.</span>
-</li>
-<li>
-<div class="code-row"><code id="connect-command">python3 muse_agent.py connect</code><button type="button" id="copy-connect" class="copy quiet" data-copy="python3 muse_agent.py connect" aria-label="연결 명령 복사">복사</button>
-</div><span>아래 연결 코드와 Muse VM 내부의 localhost 수신 주소를 입력하세요.</span>
-<div id="pair-code" class="pair-code hidden"><strong id="pair-value"></strong><span>10분 · 한 번 사용 가능</span><button id="copy-pair" class="quiet">코드 복사</button>
-</div><button id="generate-pair" class="secondary">연결 코드 만들기</button>
-</li>
-<li>
-<div class="code-row"><code>python3 muse_agent.py run</code><button type="button" class="copy quiet" data-copy="python3 muse_agent.py run" aria-label="실행 명령 복사">복사</button>
-</div><span>Muse의 VM이 서버를 폴링해 VM 내부 localhost 수신기에 전달합니다.</span>
-</li>
+<div class="step-number">01 / CONNECT WITH MUSE</div>
+<h2>Muse에게 붙여넣으면 시작됩니다.</h2>
+<p>당신은 프롬프트만 전달하세요. Muse가 자신의 클라우드 환경에서 연결을 진행하도록 필요한 정보를 담아드립니다.</p>
+<ol class="prompt-steps">
+<li><b>1</b><div><strong>연결 프롬프트 복사</strong><span>선택한 Muse의 서버 주소와 10분 일회용 코드가 자동으로 들어갑니다.</span></div></li>
+<li><b>2</b><div><strong>Muse 대화에 붙여넣기</strong><span>Muse가 실행 환경을 확인하고 수신함 준비·프로그램 설치·연결을 진행합니다.</span></div></li>
+<li><b>3</b><div><strong>이 화면에서 도착 확인</strong><span>Muse가 준비됐다고 알려주면 ‘테스트 문장 보내기’를 눌러주세요.</span></div></li>
 </ol>
-<div class="device-bar"><span id="device-status">연결되지 않음</span><button id="revoke-device" class="quiet danger">연결 해제</button>
-</div>
-<details class="connection-detail">
-<summary>수신기 준비와 Meta AI 설정 도움말</summary>
-<p>HTTP 예: <code>http://127.0.0.1:18765/inbox</code>. JSON의 <code>message</code>를 받고 저장 후 HTTP 2xx로 응답하세요. TCP 예: <code>tcp://127.0.0.1:18765</code>. 받은 ID와 <code>ok:true</code>를 JSON 한 줄로 응답해야 합니다. 메시지 ID로 중복 처리를 막으세요.</p>
-<p>연결 프로그램은 5초마다 서버를 조회합니다. 이 프로그램은 Muse의 클라우드 VM 안에서 실행합니다. Meta AI가 수신함을 읽고 처리하는 절차는 별도 구성합니다. 아래 프롬프트로 실제 환경에서 가능한 연결 방법부터 확인하세요.</p><button id="copy-muse-prompt" class="secondary" type="button">Meta AI 환경 확인 프롬프트 복사</button>
-<p class="help">일회용 코드와 기기키·로컬 인증값을 대화에 붙여넣지 마세요. 기기키가 저장된 muse-connection.json도 공유하지 마세요.</p>
+<button id="copy-muse-prompt" class="primary wide" type="button">연결 프롬프트 만들고 복사 ↗</button>
+<p id="setup-status" class="setup-status" role="status" aria-live="polite">프롬프트를 만들어 Muse에게 전달하세요.</p>
+<p class="help">일회용 코드는 연결할 Muse에게만 전달하세요. 연결할 때 기존 기기 연결은 교체됩니다. 장기 기기키와 비밀번호는 프롬프트에 포함되지 않습니다.</p>
+<div id="setup-ready" class="hidden">
+<details id="setup-preview" class="connection-detail"><summary>프롬프트 내용 보기 · 직접 복사</summary>
+<label for="setup-prompt">Muse에게 전달할 전체 프롬프트</label>
+<textarea id="setup-prompt" readonly rows="12" spellcheck="false"></textarea>
+<button id="select-setup-prompt" class="secondary" type="button">전체 선택</button>
+<p class="help">자동 복사가 안 되면 위 내용을 전체 선택해 복사하세요. 만료되면 새 프롬프트를 만드세요.</p>
 </details>
-<p class="help">기기는 Muse당 1대입니다. 새 기기 연결은 이전 연결을 교체합니다. localhost 인증이 필요하면 connect 명령에 --local-auth를 추가하세요.</p>
+</div>
+<button id="generate-pair" class="quiet" type="button">새 프롬프트 발급</button>
+<div class="device-bar"><span id="device-status">연결되지 않음</span><button id="revoke-device" class="quiet danger">연결 해제</button></div>
+<details class="connection-detail manual-setup"><summary>직접 설정하기 · 고급 안내</summary>
+<p>직접 실행할 때만 아래 안내를 사용하세요. 명령은 Muse의 클라우드 VM 안에서 실행합니다.</p>
+<ol class="setup">
+<li><a class="text-link" href="/downloads/muse-agent.zip">연결 프로그램 다운로드 ↓</a><span>VM 안에서 압축을 풀고 해당 폴더를 여세요. Python 3.10 이상이 필요합니다.</span></li>
+<li><div class="code-row"><code id="connect-command">python3 muse_agent.py connect</code><button type="button" id="copy-connect" class="copy quiet" data-copy="python3 muse_agent.py connect" aria-label="연결 명령 복사">복사</button></div>
+<span>프롬프트를 발급하면 아래에 코드가 표시됩니다. VM 내부 수신 주소와 함께 입력하세요.</span>
+<div id="pair-code" class="pair-code hidden"><strong id="pair-value"></strong><span>10분 · 한 번 사용 가능</span><button id="copy-pair" class="quiet" type="button">코드 복사</button></div></li>
+<li><div class="code-row"><code>python3 muse_agent.py run</code><button type="button" class="copy quiet" data-copy="python3 muse_agent.py run" aria-label="실행 명령 복사">복사</button></div></li>
+</ol>
+<p>HTTP 예: <code>http://127.0.0.1:18765/inbox</code>. VM 내부 수신기가 JSON의 <code>message</code>를 영속 저장하고 중복 ID를 처리한 뒤 HTTP 2xx로 응답해야 합니다. TCP는 받은 id와 <code>ok:true</code>를 담은 JSON 한 줄로 응답합니다.</p>
+<p class="help">localhost Bearer 인증이 필요하면 connect에 --local-auth를 추가하세요. 기기키가 저장된 muse-connection.json은 공개하지 마세요.</p>
+</details>
 </div>
 <div class="panel share-box">
 <div class="step-number">02 / SHARE</div>
@@ -232,6 +228,19 @@
 </div>
 </div>
 </div>
+<section class="onboarding" aria-labelledby="onboarding-title">
+<div><span class="eyebrow">YOUR FIRST DELIVERY</span>
+<h2 id="onboarding-title">Muse에 붙여넣은 뒤, 연결 결과를 확인하세요.</h2>
+<p>기기 온라인과 수신기 도착은 서로 다른 상태입니다.</p>
+</div>
+<ol id="onboarding-list" class="onboarding-list">
+</ol>
+<div class="test-line">
+<div><strong id="test-status" role="status" aria-live="polite">테스트 문장을 아직 보내지 않았습니다.</strong>
+<p id="test-detail">버튼을 누를 때만 선택한 Muse로 테스트 문장을 보냅니다.</p>
+</div><button id="send-test" class="primary" type="button">테스트 문장 보내기 ↗</button>
+</div>
+</section>
 <div class="panel history-panel">
 <div class="panel-heading">
 <div>

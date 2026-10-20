@@ -60,16 +60,15 @@ console.log(await response.json());</code>
 <p>같은 키·본문이면 HTTP 200, created:false와 기존 ID를 반환합니다. 같은 키에 다른 본문이면 HTTP 409입니다. 네트워크 오류·5xx처럼 접수 여부가 불확실하거나 429인 경우 본문과 키를 유지해 재시도하세요. 확실한 입력 오류는 수정한 뒤 새 키로 요청하세요. 웹 전송 화면과 관리 화면의 테스트 버튼은 키를 자동 관리합니다. 완료 내역·키는 30일 보관 후 정리하므로, 오래된 요청을 다시 보내면 새 메시지가 될 수 있습니다.</p>
 </section>
 <section id="receiver" class="doc-section">
-<h2>4. Muse의 클라우드 VM과 내부 수신기 연결</h2>
-<p>여기서 Muse는 Meta AI를 뜻합니다. 연결 프로그램은 Muse의 클라우드 VM 안에서 실행하고, localhost 수신기도 그 VM 내부에 준비합니다. Relay 연결 프로그램의 역할은 수신기까지 전달하는 것입니다. Meta AI가 수신함을 읽고 처리하는 절차는 별도로 구성하세요. 관리 화면의 환경 확인 프롬프트로 가능한 방법부터 확인할 수 있습니다.</p>
-<ol>
-<li>Muse 관리 화면에서 연결 프로그램 ZIP을 받아 Muse의 클라우드 VM 안에서 압축을 풉니다.</li>
-<li>Muse의 VM 안에서 해당 폴더를 열고 관리 화면의 연결 명령을 복사해 실행합니다. 명령에 현재 서버 주소가 포함됩니다.</li>
-<li>관리 화면에서 생성한 10분 연결 코드와 localhost 수신 URL을 입력합니다.</li>
-<li><code>python3 muse_agent.py run</code>으로 5초 폴링을 시작합니다.</li>
-</ol>
-<p>Python 3.10 이상, 추가 패키지 없이 사용합니다. HTTP 예: http://127.0.0.1:18765/inbox. localhost Bearer 인증이 있으면 connect에 --local-auth를 추가하세요. TCP 예: tcp://127.0.0.1:18765. TCP는 받은 id와 ok:true를 담은 JSON 한 줄로 응답해야 합니다.</p>
-<p>기기 인증키는 연결 과정에서 자동 발급되어 muse-connection.json에 저장됩니다. 이 파일을 공유하지 마세요. Muse마다 기기 1대를 연결하며 새 연결 시 이전 키가 무효화됩니다. 재연결할 때는 --config 옵션으로 새 설정 파일 경로를 지정하세요. 연결 해제는 관리 화면에서 할 수 있습니다.</p><a class="secondary" href="/downloads/muse-agent.zip">연결 프로그램 다운로드 ↓</a>
+<h2>4. 프롬프트를 Muse에게 붙여넣어 연결하기</h2>
+<p>Muse는 클라우드 작업 환경을 다루는 Meta AI 인터페이스입니다. 사용자는 터미널 설정 대신 관리 화면의 <strong>‘연결 프롬프트 만들고 복사’</strong>를 눌러 Muse 대화에 붙여넣으세요. 선택한 Muse의 실제 서버 주소·다운로드 주소·10분 일회용 코드와 수행 순서가 자동으로 들어갑니다.</p>
+<ol><li>계정과 Muse를 만든 뒤 연결 프롬프트를 복사합니다.</li><li>Muse에게 그대로 붙여넣습니다. Muse가 자신의 환경에서 수신함 준비·설치·연결·실행을 진행하도록 요청합니다.</li><li>Muse가 준비됐다고 알려주면 웹의 테스트 버튼을 누르고 수신기 ACK를 확인합니다.</li></ol>
+<p>유효한 프롬프트는 같은 코드로 다시 복사합니다. 새 발급은 이전 미사용 코드를 무효화합니다. 만료·사용된 코드는 새 프롬프트로 교체하세요. 일회용 코드는 연결할 Muse에게만 전달하고 장기 기기키·계정 비밀번호는 공유하지 마세요. 자동 복사가 차단되면 프롬프트 미리보기에서 전체 선택해 복사할 수 있습니다.</p>
+<p>Muse가 실제 터미널·Python 3.10 이상·네트워크·백그라운드 실행 도구를 사용할 수 있는지 확인하도록 안내합니다. 지원되지 않는 도구나 상시 실행을 보장하지 않습니다. 수신함에 저장된 문장을 Muse가 읽고 처리하는 절차도 Muse와 확인하세요.</p>
+<details class="connection-detail"><summary>직접 설치하는 개발자를 위한 안내</summary>
+<p>관리 화면의 ‘직접 설정하기 · 고급 안내’를 펼쳐 ZIP 다운로드, 서버 주소가 포함된 connect 명령, 일회용 코드와 VM 내부 localhost URL을 사용하세요. <code>python3 muse_agent.py run</code>이 5초마다 조회합니다. HTTP 수신기는 JSON의 message를 영속 저장하고 중복 ID를 처리한 뒤 2xx를 반환해야 합니다. TCP는 받은 id와 ok:true를 JSON 한 줄로 반환합니다. 추가 Python 패키지는 필요 없습니다.</p>
+<a class="secondary" href="/downloads/muse-agent.zip">연결 프로그램 다운로드 ↓</a>
+</details>
 </section>
 <section id="history" class="doc-section">
 <h2>5. 전달 내역과 데이터 보관</h2>
