@@ -7,7 +7,7 @@
 ## 사용하기
 
 1. 서비스에서 계정을 만들고 Muse를 등록합니다.
-2. 관리 화면의 연결 프로그램을 내려받고, Muse가 실행되는 기기에서 `python3 muse_agent.py connect`를 실행합니다.
+2. 관리 화면의 연결 프로그램을 내려받고, Muse가 실행되는 기기에서 관리 화면에 표시된 `python3 muse_agent.py connect --server 서버주소` 명령을 실행합니다.
 3. 웹에서 생성한 10분 일회용 코드와 실행 중인 localhost 수신기의 URL을 입력합니다.
 4. `python3 muse_agent.py run`으로 폴링을 시작합니다.
 5. Muse 전용 페이지를 공유하거나 ‘Codex·외부 프로그램용 사용법 복사’를 사용합니다.
@@ -43,7 +43,7 @@ export PUBLIC_SEND=false
 python3 server.py
 ```
 
-브라우저에서 `http://127.0.0.1:8080`을 엽니다. 로컬 인스턴스에 기기를 연결할 때는 `python3 muse_agent.py connect --server http://127.0.0.1:8080`을 사용하세요. 웹의 간단 연결 명령은 운영 서비스 주소를 기본값으로 사용합니다.
+브라우저에서 `http://127.0.0.1:8080`을 엽니다. 로컬 인스턴스에 기기를 연결할 때는 `python3 muse_agent.py connect --server http://127.0.0.1:8080`을 사용하세요. 웹의 연결 명령과 다운로드 안내는 접속한 서버 주소를 포함합니다.
 
 `PUBLIC_SEND`는 기존 단일 VM의 `/send` 공개 여부입니다. 새 Muse의 공개 여부는 Muse별 설정으로 관리합니다. 서버 토큰 두 개는 기존 API용이며, 새 사용자나 송신자에게 공유하지 않습니다.
 

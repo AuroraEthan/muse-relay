@@ -190,5 +190,6 @@ class Muses(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(raw)) as z:
             self.assertTrue({'muse_agent.py','vm_agent.py','runtime.py','START.md'} <= set(z.namelist()))
             self.assertFalse(any(n.endswith('.env') for n in z.namelist()))
+            self.assertIn('connect --server ' + self.url, z.read('START.md').decode())
 
 if __name__=='__main__':unittest.main()
