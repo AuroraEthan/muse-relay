@@ -28,6 +28,7 @@ for attempt in range(30):
         time.sleep(0.5)
 
 assert b'Muse Relay' in get('/')
+assert b'ConnectionPrompts' in get('/muse-setup.js')
 assert b'RelayTest' in get('/muse-test.js')
 assert b'VM' in get('/legacy')
 assert json.loads(get('/openapi.json'))['info']['version'] == '2.0.0'

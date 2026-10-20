@@ -28,6 +28,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Check browser JavaScript syntax
         run: |
+          node --check static/muse-setup.js
+          node --test tests/test_setup_prompt.cjs
           node --check static/muse-test.js
           node --test tests/test_onboarding.cjs
           node --check static/muse.js

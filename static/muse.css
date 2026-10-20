@@ -272,3 +272,12 @@ dialog pre { font-size: 14px; max-height: 65vh; overflow: auto; white-space: pre
  .doc-section pre { padding: 16px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+.prompt-steps { list-style:none; padding:0; margin:25px 0; }
+.prompt-steps li { display:flex; gap:14px; margin:20px 0; align-items:flex-start; }
+.prompt-steps b { background:var(--ink); color:white; width:28px; height:28px; display:grid; place-items:center; flex-shrink:0; border-radius:50%; font-size:14px; }
+.prompt-steps strong,.prompt-steps span { display:block; }
+.prompt-steps span { margin-top:5px; color:var(--muted); font-size:14px; }
+.setup-status { font-size:14px; color:var(--green); margin-top:14px!important; }
+#setup-prompt { font:13px/1.8 ui-monospace,monospace; min-height:260px; resize:vertical; margin-bottom:12px; }
+.manual-setup { border-top:1px solid var(--line); padding-top:18px; }

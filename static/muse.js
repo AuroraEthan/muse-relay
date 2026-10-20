@@ -2,6 +2,9 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const state = {user:null, mode:'signup', muses:[], selected:null, publicMuse:null, owner:false, refreshing:false, refreshAgain:false, cursor:null, pending:null, sending:false};
+  const connectionPrompts = new ConnectionPrompts();
+  const setupJobs = new Set();
+  let setupSelection = 0;
   const connectionTest = new RelayTest({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value)});
   const pathMatch = location.pathname.match(/^\/m\/(m_[a-f0-9]{32})\/?$/);
   const publicId = pathMatch && pathMatch[1];
@@ -72,13 +75,13 @@
   }
   $('create-form').addEventListener('submit',async event=>{
     event.preventDefault();const button=event.currentTarget.querySelector('button');button.disabled=true;
-    try { const {muse}=await api('/api/muses',{method:'POST',body:{name:$('muse-name').value,public_send:$('new-public').checked}});$('muse-name').value='';state.selected=muse;await renderHome();notice('Muse를 만들었습니다. 이제 연결 프로그램과 코드로 기기를 연결하세요.'); }
+    try { const {muse}=await api('/api/muses',{method:'POST',body:{name:$('muse-name').value,public_send:$('new-public').checked}});$('muse-name').value='';state.selected=muse;await renderHome();notice('Muse를 만들었습니다. 연결 프롬프트를 복사해 Muse 대화에 붙여넣으세요.');$('copy-muse-prompt').focus(); }
     catch(error){notice(error.message,true);}finally{button.disabled=false;}
   });
   async function selectMuse(m) {
-    state.selected=m;state.cursor=null;$('history').replaceChildren(el('div','전송 내역을 불러오는 중…','empty'));$('stats').replaceChildren();show('more-history',false);show('pair-code',false);$('pair-value').textContent='';show('manage');renderCards();renderManage();await refresh();
+    setupSelection++;state.selected=m;state.cursor=null;$('history').replaceChildren(el('div','전송 내역을 불러오는 중…','empty'));$('stats').replaceChildren();show('more-history',false);show('pair-code',false);$('pair-value').textContent='';show('manage');renderCards();renderManage();await refresh();
   }
-  function renderManage(){const m=state.selected;$('manage-name').textContent=m.name;$('web-url').textContent=webUrl(m.id);$('api-url').textContent=apiUrl(m.id);$('open-public').href=webUrl(m.id);$('public-setting').checked=m.public_send;$('device-status').textContent=deviceText(m)+(m.last_seen?' · 최근 '+date(m.last_seen):'');$('revoke-device').disabled=!m.device_connected;renderOnboarding();}
+  function renderManage(){const m=state.selected;$('manage-name').textContent=m.name;$('web-url').textContent=webUrl(m.id);$('api-url').textContent=apiUrl(m.id);$('open-public').href=webUrl(m.id);$('public-setting').checked=m.public_send;$('device-status').textContent=deviceText(m)+(m.last_seen?' · 최근 '+date(m.last_seen):'');$('revoke-device').disabled=!m.device_connected;renderOnboarding();renderSetup();}
   function renderOnboarding(){
     const m=state.selected;if(!m)return;const test=connectionTest.read(m.id);
     const checks=[['Muse 등록',true],['VM 연결',m.device_connected],['테스트 문장 접수',Boolean(test.messageId)],['수신기 ACK',test.status==='acked']];
@@ -95,19 +98,63 @@
     catch(error){if(state.selected.id===mid)notice(error.message,true);}
     finally{if(state.selected.id===mid)renderOnboarding();}
   });
-  $('copy-muse-prompt').addEventListener('click',()=>copy(`Muse(Meta AI)의 클라우드 VM에 Muse Relay를 연결하려고 합니다. 이 클라우드 VM 안에서 연결 프로그램을 실행하고, 외부 웹·Codex·프로그램에서 보낸 문장을 VM 내부 localhost 수신함으로 받아 읽고 처리하고 싶습니다. 먼저 현재 Muse 클라우드 VM에서 실제로 접근할 수 있는 파일, 실행 도구, VM 내부 localhost HTTP/TCP 수신 가능 여부를 확인해주세요. 없는 도구나 권한은 있다고 가정하지 마세요. 가능한 경우 수신기 또는 수신함을 준비하는 방법과 Meta AI가 이를 명시적으로 읽는 절차를 제안해주세요. HTTP 수신기는 JSON의 message를 받고 저장 후 2xx로 응답하며, TCP는 받은 id와 ok:true를 JSON 한 줄로 응답해야 합니다. 메시지 ID로 중복을 방지해주세요. 수신기 성공 응답과 Meta AI의 읽기·실행은 별도로 확인하고, 불가능한 부분은 알려주세요. 비밀번호·연결 코드·기기키·인증값은 요청하거나 출력하지 마세요. 실제 실행이나 변경 전에는 내가 이해할 수 있게 절차를 설명해주세요.`));
+  function renderSetup() {
+    const muse=state.selected;if(!muse)return;
+    const record=connectionPrompts.current(muse);
+    const busy=setupJobs.has(muse.id);
+    $('copy-muse-prompt').disabled=busy;$('generate-pair').disabled=busy;
+    $('copy-muse-prompt').textContent=busy?'프롬프트 준비 중…':record?'연결 프롬프트 다시 복사 ↗':'연결 프롬프트 만들고 복사 ↗';
+    show('setup-ready',Boolean(record));show('pair-code',Boolean(record));
+    if(record){
+      const text=buildConnectionPrompt(location.origin,muse,record);
+      if($('setup-prompt').value!==text)$('setup-prompt').value=text;
+      $('pair-value').textContent=record.code;
+      const seconds=Math.max(0,Math.ceil((record.expiresAt-Date.now())/1000));
+      $('setup-status').textContent=`Muse에 붙여넣기 · 유효 시간 ${Math.floor(seconds/60)}분 ${seconds%60}초 · 일회용`;
+    }else{
+      $('setup-prompt').value='';$('pair-value').textContent='';$('setup-preview').open=false;
+      $('setup-status').textContent=busy?'선택한 Muse의 연결 정보를 준비하고 있습니다.':muse.device_connected?'VM이 연결되어 있습니다. 다시 연결할 때만 새 프롬프트를 만드세요.':'유효한 프롬프트가 없습니다. 새로 만들어 Muse에게 전달하세요.';
+    }
+  }
+  async function copySetupText(text,muse,record) {
+    if(state.selected.id!==muse.id||connectionPrompts.current(state.selected)!==record)return;
+    try{await navigator.clipboard.writeText(text);notice('복사했습니다. 10분 안에 연결할 Muse 대화에 붙여넣으세요.');}
+    catch(_){
+      if(state.selected.id!==muse.id||connectionPrompts.current(state.selected)!==record){renderSetup();return;}
+      renderSetup();$('setup-preview').open=true;$('setup-prompt').focus();$('setup-prompt').select();
+      notice('자동 복사를 사용할 수 없어 프롬프트를 열었습니다. 선택된 전체 내용을 복사해 Muse에게 전달하세요.');
+    }
+  }
+  async function prepareSetup(copyIt,force=false) {
+    if(!state.selected)return;
+    const muse=state.selected,mid=muse.id,selection=setupSelection;
+    if(setupJobs.has(mid))return;
+    setupJobs.add(mid);renderSetup();notice('');
+    try{
+      const record=await connectionPrompts.issue(muse,()=>api(`/api/muses/${mid}/pairing`,{method:'POST',body:{}}),force);
+      if(state.selected.id!==mid||setupSelection!==selection)return;
+      if(connectionPrompts.current(state.selected)!==record)throw new Error('setup_changed');
+      renderSetup();
+      if(copyIt)await copySetupText(buildConnectionPrompt(location.origin,state.selected,record),muse,record);
+      else notice('새 프롬프트를 만들었습니다. 이전 미사용 코드는 무효화됐습니다. 복사해 Muse에게 붙여넣으세요.');
+    }catch(error){
+      if(state.selected.id===mid&&setupSelection===selection)notice(['setup_changed','pairing_expired'].includes(error.message)?'연결 상태가 바뀌었거나 코드가 만료됐습니다. 새 프롬프트를 만들어주세요.':error.message,true);
+    }finally{setupJobs.delete(mid);if(state.selected.id===mid)renderSetup();}
+  }
+  $('copy-muse-prompt').addEventListener('click',()=>prepareSetup(true));
+  $('select-setup-prompt').addEventListener('click',()=>{
+    if(!connectionPrompts.current(state.selected)){renderSetup();notice('코드가 만료됐습니다. 새 프롬프트를 만들어주세요.',true);return;}
+    $('setup-prompt').focus();$('setup-prompt').select();
+  });
   $('copy-web').addEventListener('click',()=>copy(webUrl(state.selected.id)));
   $('copy-api').addEventListener('click',()=>copy(apiUrl(state.selected.id)));
   $('copy-instructions').addEventListener('click',()=>copy(instructions(state.selected)));
-  $('copy-pair').addEventListener('click',()=>copy($('pair-value').textContent));
-  $('generate-pair').addEventListener('click',async()=>{
-    const button=$('generate-pair');button.disabled=true;const mid=state.selected.id;
-    try{const result=await api(`/api/muses/${mid}/pairing`,{method:'POST',body:{}});if(state.selected.id===mid){$('pair-value').textContent=result.code;show('pair-code');notice('10분 안에 Muse 클라우드 VM의 터미널에서 코드를 입력하세요. 이전에 발급한 미사용 코드는 무효화됩니다.');}}
-    catch(error){notice(error.message,true);}finally{button.disabled=false;}
-  });
+  $('copy-pair').addEventListener('click',()=>{const muse=state.selected,record=connectionPrompts.current(muse);if(record)copySetupText(record.code,muse,record);else renderSetup();});
+  $('generate-pair').addEventListener('click',()=>prepareSetup(false,true));
   $('revoke-device').addEventListener('click',async()=>{
-    if(!confirm('기기 연결과 미사용 연결 코드를 해제할까요? 대기 메시지는 보관됩니다.'))return;
-    try{await api(`/api/muses/${state.selected.id}/device/revoke`,{method:'POST',body:{}});show('pair-code',false);await refresh();notice('기기 연결을 해제했습니다.');}catch(error){notice(error.message,true);}
+    if(!state.selected||!confirm('기기 연결과 미사용 연결 코드를 해제할까요? 대기 메시지는 보관됩니다.'))return;
+    const mid=state.selected.id;
+    try{await api(`/api/muses/${mid}/device/revoke`,{method:'POST',body:{}});connectionPrompts.invalidate(mid);if(state.selected.id===mid){renderSetup();await refresh();notice('기기 연결을 해제했습니다.');}}catch(error){if(state.selected.id===mid)notice(error.message,true);}
   });
   $('save-settings').addEventListener('click',async()=>{const button=$('save-settings');button.disabled=true;const mid=state.selected.id;try{const {muse}=await api(`/api/muses/${mid}/settings`,{method:'POST',body:{public_send:$('public-setting').checked}});state.muses=state.muses.map(m=>m.id===muse.id?muse:m);if(state.selected.id===mid){state.selected=muse;renderManage();}renderCards();notice('공개 수신 설정을 저장했습니다.');}catch(error){notice(error.message,true);}finally{button.disabled=false;}});
   function appendHistory(messages, append=false) {
@@ -127,7 +174,7 @@
         try{const message=await api(`/api/muses/${mid}/messages/${test.messageId}`);connectionTest.observe(mid,message);}
         catch(error){testLookupError=true;}
       }
-      if(state.selected.id!==mid)return;renderOnboarding();
+      if(state.selected.id!==mid)return;renderOnboarding();renderSetup();
       if(testLookupError)$('test-detail').textContent=test.messageId+' · 현재 수신 상태를 확인하지 못했습니다. 다음 갱신에서 다시 확인합니다.';
       appendHistory(history.messages,append);state.cursor=history.next_cursor;show('more-history',Boolean(state.cursor));$('history-meta').textContent='5초마다 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR')+' 확인';
     }catch(error){notice(error.message,true);}finally{state.refreshing=false;if(state.refreshAgain){state.refreshAgain=false;refresh();}}
@@ -156,5 +203,6 @@
   $('public-copy-api').addEventListener('click',()=>copy(instructions(state.publicMuse)));
   async function start(){try{try{state.user=(await api('/api/auth/me')).user;}catch(error){if(error.status!==401)throw error;}show('signout',Boolean(state.user));show('nav-login',!state.user);show('nav-start',!state.user);if(publicId)await publicPage();else await renderHome();}catch(error){notice(error.message,true);}finally{show('loading',false);}}
   setInterval(()=>{if(!document.hidden&&state.user&&!publicId&&!$('manage').classList.contains('hidden'))refresh();},5000);
+  setInterval(()=>{if(!document.hidden&&state.selected&&!publicId)renderSetup();},1000);
   start();
 })();
