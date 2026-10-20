@@ -19,3 +19,6 @@ __pycache__/
 *.py[cod]
 *.log
 .DS_Store
+
+# Local security audit artifacts
+.gstack/security-reports/
