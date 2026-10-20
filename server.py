@@ -20,6 +20,7 @@ ID = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
 STATIC = Path(__file__).parent / 'static'
 ASSETS = {'/': ('muse.html', 'text/html; charset=utf-8'),
           '/legacy': ('index.html', 'text/html; charset=utf-8'),
+          '/muse-test.js': ('muse-test.js', 'text/javascript; charset=utf-8'),
           '/muse.js': ('muse.js', 'text/javascript; charset=utf-8'),
           '/muse.css': ('muse.css', 'text/css; charset=utf-8'),
           '/app.js': ('app.js', 'text/javascript; charset=utf-8'),

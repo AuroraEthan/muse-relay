@@ -1,20 +1,86 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Muse Relay · API 사용법</title><link rel="stylesheet" href="/app.css"></head><body><main class="doc-page"><nav class="doc-nav"><a class="brand" href="/">Muse Relay<span class="brand-period">.</span></a><a class="button secondary" href="/">← 나의 Muse</a></nav><header class="doc-heading"><div class="eyebrow">MUSE RELAY / DEVELOPER REFERENCE</div><h1>문장 하나로 연결하세요.</h1><p>Muse마다 전용 주소가 생깁니다. 송신자는 공개 주소에 문장만 보내면 됩니다.</p></header>
-<section class="panel doc-section"><h2>1. 내 Muse의 API 주소 받기</h2><p>홈에서 계정과 Muse를 만들고, ‘외부 프로그램용 API’ 주소를 복사하세요. 다른 Codex에 전달할 전체 사용법도 한 번에 복사할 수 있습니다.</p><pre><code>POST /api/muses/{muse_id}/send
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Muse Relay · API 사용법</title>
+<link rel="stylesheet" href="/muse.css">
+</head>
+<body><a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<header class="site-header"><a class="brand" href="/"><span class="logo" aria-hidden="true">m↗</span>Muse <span class="brand-light">Relay</span></a>
+<nav><a href="/">서비스 소개</a><a href="/#login">로그인</a><a class="primary" href="/#signup">시작하기 ↗</a>
+</nav>
+</header>
+<main id="main">
+<header class="doc-heading">
+<div class="eyebrow">MUSE RELAY / DEVELOPER REFERENCE</div>
+<h1>문장 전송을,<br>내 프로그램에서도.</h1>
+<p>공개 Muse 주소에 평문을 POST하세요. Relay 대기열에 접수한 문장을 Muse의 클라우드 VM이 폴링해 VM 내부 localhost 수신기로 전달합니다.</p>
+</header>
+<div class="docs-layout">
+<nav class="docs-nav" aria-label="API 문서 목차"><a href="#getting-started">시작하기</a><a href="#plain-text">평문 POST</a><a href="#retries">재시도와 중복 방지</a><a href="#receiver">기기·수신기 연결</a><a href="#history">수신 상태·보관</a><a href="#auth">관리·기기 인증</a><a href="#legacy">기존 VM</a><a href="#errors">오류 응답</a>
+</nav>
+<div>
+<section id="getting-started" class="doc-section">
+<h2>1. 내 Muse의 API 주소 받기</h2>
+<p>홈에서 계정과 Muse를 만들고, ‘외부 프로그램용 API’ 주소를 복사하세요. 다른 Codex에 전달할 전체 사용법도 한 번에 복사할 수 있습니다.</p>
+<pre><code>POST /api/muses/{muse_id}/send
 Content-Type: text/plain; charset=utf-8
 
-작업 결과를 정리해서 알려줘.</code></pre><p>공개 수신을 켠 Muse에는 인증키·로그인·JSON·직접 정하는 ID가 필요 없습니다. 꺼진 경우에는 로그인한 소유자의 웹 전송만 허용됩니다. 주소마다 대상 Muse가 고정되어 다른 기기에 메시지가 섞이지 않습니다.</p><a class="button secondary compact" href="/openapi.json">OpenAPI 3.1 명세 ↗</a></section>
-<section class="panel doc-section"><h2>2. JavaScript에서 보내기</h2><pre><code>const endpoint = '여기에 내 Muse의 API 주소 붙여넣기';
+작업 결과를 정리해서 알려줘.</code>
+</pre>
+<p>공개 수신을 켠 Muse에는 인증키·로그인·JSON·직접 정하는 ID가 필요 없습니다. 꺼진 경우에는 로그인한 소유자의 웹 전송만 허용됩니다. 주소마다 대상 Muse가 고정되어 다른 기기에 메시지가 섞이지 않습니다.</p><a class="secondary" href="/openapi.json">OpenAPI 3.1 명세 ↗</a>
+</section>
+<section id="plain-text" class="doc-section">
+<h2>2. JavaScript에서 보내기</h2>
+<pre><code>const endpoint = '여기에 내 Muse의 API 주소 붙여넣기';
 const response = await fetch(endpoint, {
   method: 'POST',
   headers: {'Content-Type': 'text/plain; charset=utf-8'},
   body: '작업 결과를 정리해서 알려줘.'
 });
 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-console.log(await response.json());</code></pre><p>처음 접수 시 HTTP 201과 아래 응답을 반환합니다.</p><pre><code>{"id":"msg-자동생성값","created":true}</code></pre><ul><li>외부 웹사이트의 호출도 허용합니다(CORS). 인증 쿠키는 보내지 마세요.</li><li>문장은 UTF-8 기준 최대 16,384 bytes이며, 빈 문장은 거절합니다.</li><li>Muse마다 분당 60건, 미전달 메시지 최대 1,000개입니다. 초과 시 HTTP 429가 반환됩니다.</li><li>응답은 서버 접수 확인입니다. 기기 수신이나 Muse 작업 실행 완료를 뜻하지 않습니다.</li></ul></section>
-<section class="panel doc-section"><h2>3. 재시도와 중복 방지</h2><p>같은 문장을 새 요청으로 보내면 별도 메시지입니다. 통신 실패 후 재시도할 때는 선택 사항인 Idempotency-Key에 고유값을 넣고 같은 요청에만 재사용하세요. ID를 사용자가 정할 필요는 없습니다.</p><pre><code>Idempotency-Key: 클라이언트가자동생성한고유값</code></pre><p>같은 키·본문이면 HTTP 200, created:false와 기존 ID를 반환합니다. 같은 키에 다른 본문이면 HTTP 409입니다. 웹 전송 화면은 키를 자동 관리합니다. 완료 내역·키는 30일 보관 후 정리하므로, 오래된 요청을 다시 보내면 새 메시지가 될 수 있습니다.</p></section>
-<section class="panel doc-section"><h2>4. 내 기기 연결</h2><ol><li>Muse 관리 화면에서 연결 프로그램 ZIP을 받아 압축을 풉니다.</li><li>해당 폴더에서 관리 화면의 연결 명령을 복사해 실행합니다. 명령에 현재 서버 주소가 포함됩니다.</li><li>관리 화면에서 생성한 10분 연결 코드와 localhost 수신 URL을 입력합니다.</li><li><code>python3 muse_agent.py run</code>으로 5초 폴링을 시작합니다.</li></ol><p>Python 3.10 이상, 추가 패키지 없이 사용합니다. HTTP 예: http://127.0.0.1:18765/inbox. localhost Bearer 인증이 있으면 connect에 --local-auth를 추가하세요. TCP 예: tcp://127.0.0.1:18765. TCP는 받은 id와 ok:true를 담은 JSON 한 줄로 응답해야 합니다.</p><p>기기 인증키는 연결 과정에서 자동 발급되어 muse-connection.json에 저장됩니다. 이 파일을 공유하지 마세요. Muse마다 기기 1대를 연결하며 새 연결 시 이전 키가 무효화됩니다. 재연결할 때는 --config 옵션으로 새 설정 파일 경로를 지정하세요. 연결 해제는 관리 화면에서 할 수 있습니다.</p><a class="button secondary compact" href="/downloads/muse-agent.zip">연결 프로그램 다운로드 ↓</a></section>
-<section class="panel doc-section"><h2>5. 전달 내역과 데이터 보관</h2><p>로그인한 소유자만 해당 Muse의 내역을 볼 수 있습니다. pending은 기기 대기, leased는 가져간 상태, acked는 localhost의 성공 응답을 확인한 상태입니다. 마지막 상태는 Muse의 작업 실행 결과가 아닙니다.</p><p>HTTP 수신기는 payload.message로 문장을 받고, Idempotency-Key / X-Message-ID로 중복을 구분합니다. 성공 시 HTTP 2xx를 반환하세요. 응답 유실로 재전달될 수 있으므로 수신측에서도 중복을 방지해야 합니다.</p><p>완료 기록은 30일 후 큐 접근 시 정리하며, 사용하지 않는 Muse도 매시간 정리합니다. 대기 메시지는 보관합니다. 계정당 Muse는 3개까지 만들 수 있습니다. 초기 공개 버전에는 비밀번호 복구·결제·팀 기능이 없습니다.</p></section>
-<section class="panel doc-section"><h2>관리·기기 API</h2><p>관리 API는 HttpOnly muse_session 쿠키로 인증합니다. 쓰기 요청은 같은 Origin의 application/json이어야 합니다. 공개 송신자에게 관리 쿠키나 기기키를 배포하지 마세요.</p><pre><code>POST /api/auth/signup   {"username":"사용자명","password":"12자이상"}
+console.log(await response.json());</code>
+</pre>
+<p>처음 접수 시 HTTP 201과 아래 응답을 반환합니다.</p>
+<pre><code>{"id":"msg-자동생성값","created":true}</code>
+</pre>
+<ul>
+<li>공개 송신 API는 외부 웹사이트의 호출도 허용합니다(CORS). 인증 쿠키는 보내지 마세요. 관리 API와 기기 API의 인증은 아래 별도 절을 따릅니다.</li>
+<li>문장은 UTF-8 기준 최대 16,384 bytes이며, 빈 문장은 거절합니다.</li>
+<li>Muse마다 분당 60건, 미전달 메시지 최대 1,000개입니다. 초과 시 HTTP 429가 반환됩니다.</li>
+<li>응답은 서버 접수 확인입니다. 기기 수신이나 Muse 작업 실행 완료를 뜻하지 않습니다.</li>
+</ul>
+</section>
+<section id="retries" class="doc-section">
+<h2>3. 재시도와 중복 방지</h2>
+<p>같은 문장을 새 요청으로 보내면 별도 메시지입니다. 통신 실패 후 재시도할 때는 선택 사항인 Idempotency-Key에 고유값을 넣고 같은 요청에만 재사용하세요. ID를 사용자가 정할 필요는 없습니다.</p>
+<pre><code>Idempotency-Key: 클라이언트가자동생성한고유값</code>
+</pre>
+<p>같은 키·본문이면 HTTP 200, created:false와 기존 ID를 반환합니다. 같은 키에 다른 본문이면 HTTP 409입니다. 네트워크 오류·5xx처럼 접수 여부가 불확실하거나 429인 경우 본문과 키를 유지해 재시도하세요. 확실한 입력 오류는 수정한 뒤 새 키로 요청하세요. 웹 전송 화면과 관리 화면의 테스트 버튼은 키를 자동 관리합니다. 완료 내역·키는 30일 보관 후 정리하므로, 오래된 요청을 다시 보내면 새 메시지가 될 수 있습니다.</p>
+</section>
+<section id="receiver" class="doc-section">
+<h2>4. Muse의 클라우드 VM과 내부 수신기 연결</h2>
+<p>여기서 Muse는 Meta AI를 뜻합니다. 연결 프로그램은 Muse의 클라우드 VM 안에서 실행하고, localhost 수신기도 그 VM 내부에 준비합니다. Relay 연결 프로그램의 역할은 수신기까지 전달하는 것입니다. Meta AI가 수신함을 읽고 처리하는 절차는 별도로 구성하세요. 관리 화면의 환경 확인 프롬프트로 가능한 방법부터 확인할 수 있습니다.</p>
+<ol>
+<li>Muse 관리 화면에서 연결 프로그램 ZIP을 받아 Muse의 클라우드 VM 안에서 압축을 풉니다.</li>
+<li>Muse의 VM 안에서 해당 폴더를 열고 관리 화면의 연결 명령을 복사해 실행합니다. 명령에 현재 서버 주소가 포함됩니다.</li>
+<li>관리 화면에서 생성한 10분 연결 코드와 localhost 수신 URL을 입력합니다.</li>
+<li><code>python3 muse_agent.py run</code>으로 5초 폴링을 시작합니다.</li>
+</ol>
+<p>Python 3.10 이상, 추가 패키지 없이 사용합니다. HTTP 예: http://127.0.0.1:18765/inbox. localhost Bearer 인증이 있으면 connect에 --local-auth를 추가하세요. TCP 예: tcp://127.0.0.1:18765. TCP는 받은 id와 ok:true를 담은 JSON 한 줄로 응답해야 합니다.</p>
+<p>기기 인증키는 연결 과정에서 자동 발급되어 muse-connection.json에 저장됩니다. 이 파일을 공유하지 마세요. Muse마다 기기 1대를 연결하며 새 연결 시 이전 키가 무효화됩니다. 재연결할 때는 --config 옵션으로 새 설정 파일 경로를 지정하세요. 연결 해제는 관리 화면에서 할 수 있습니다.</p><a class="secondary" href="/downloads/muse-agent.zip">연결 프로그램 다운로드 ↓</a>
+</section>
+<section id="history" class="doc-section">
+<h2>5. 전달 내역과 데이터 보관</h2>
+<p>로그인한 소유자만 해당 Muse의 내역을 볼 수 있습니다. pending은 기기 대기, leased는 가져간 상태, acked(수신기 ACK)는 localhost의 성공 응답을 확인한 상태입니다. 기기 온라인 표시만으로 수신기 ACK를 대신할 수 없습니다. 관리 화면에서 테스트 문장을 직접 전송하면 그 메시지 ID의 ACK를 확인합니다. Meta AI의 읽기·작업 실행 결과는 관측하지 않습니다.</p>
+<p>HTTP 수신기는 payload.message로 문장을 받고, Idempotency-Key / X-Message-ID로 중복을 구분합니다. 성공 시 HTTP 2xx를 반환하세요. 응답 유실로 재전달될 수 있으므로 수신측에서도 중복을 방지해야 합니다.</p>
+<p>완료 기록은 30일 후 큐 접근 시 정리하며, 사용하지 않는 Muse도 매시간 정리합니다. 대기 메시지는 보관합니다. 계정당 Muse는 3개까지 만들 수 있습니다. 초기 공개 버전에는 비밀번호 복구·결제·팀 기능이 없습니다.</p>
+</section>
+<section id="auth" class="doc-section">
+<h2>관리·기기 API</h2>
+<p>관리 API는 HttpOnly muse_session 쿠키로 인증합니다. 쓰기 요청은 같은 Origin의 application/json이어야 합니다. 공개 송신자에게 관리 쿠키나 기기키를 배포하지 마세요.</p>
+<pre><code>POST /api/auth/signup   {"username":"사용자명","password":"12자이상"}
 POST /api/auth/login    {"username":"사용자명","password":"비밀번호"}
 GET  /api/auth/me
 POST /api/auth/logout  {}
@@ -25,11 +91,43 @@ POST /api/muses/{muse_id}/settings       {"public_send":false}
 GET  /api/muses/{muse_id}/messages?limit=25&amp;before=커서
 GET  /api/muses/{muse_id}/messages/{id}
 POST /api/muses/{muse_id}/pairing        {}
-POST /api/muses/{muse_id}/device/revoke  {}</code></pre><p>다음은 연결 프로그램 전용입니다. 코드 교환 후 발급받은 Bearer 기기키는 해당 Muse의 claim·ack만 허용합니다.</p><pre><code>POST /api/pair  {"code":"10분연결코드"}
+POST /api/muses/{muse_id}/device/revoke  {}</code>
+</pre>
+<p>다음은 연결 프로그램 전용입니다. 코드 교환 후 발급받은 Bearer 기기키는 해당 Muse의 claim·ack만 허용합니다.</p>
+<pre><code>POST /api/pair  {"code":"10분연결코드"}
 POST /api/muses/{muse_id}/claim  {}
-POST /api/muses/{muse_id}/messages/{id}/ack  {"lease_token":"점유토큰"}</code></pre></section>
-<section class="panel doc-section"><h2>기존 단일 VM API도 유지됩니다</h2><p>기존에 안내한 아래 주소는 원래 VM으로 계속 전달합니다. 새 Muse를 등록해도 기존 VM 설정을 바꿀 필요가 없습니다.</p><pre><code>POST https://vm-https-check-production.up.railway.app/send
+POST /api/muses/{muse_id}/messages/{id}/ack  {"lease_token":"점유토큰"}</code>
+</pre>
+</section>
+<section id="legacy" class="doc-section">
+<h2>기존 단일 VM API도 유지됩니다</h2>
+<p>기존에 안내한 아래 주소는 원래 VM으로 계속 전달합니다. 새 Muse를 등록해도 기존 VM 설정을 바꿀 필요가 없습니다.</p>
+<pre><code>POST https://vm-https-check-production.up.railway.app/send
 Content-Type: text/plain; charset=utf-8
 
-VM에 보낼 문장</code></pre><p>현재 기존 /send도 키 없이 사용할 수 있습니다. /messages 내역은 기존 관리자 인증, /claim과 /messages/{id}/ack는 기존 VM키를 사용합니다.</p><a class="button secondary compact" href="https://vm-https-check-production.up.railway.app/legacy">기존 VM 전송 화면 ↗</a></section>
-<section class="panel doc-section"><h2>오류 응답</h2><ul><li>400: 비어 있는 문장이나 잘못된 입력</li><li>401: 로그인·기기 인증 필요 또는 만료된 연결 코드</li><li>403: 관리 요청 Origin 확인</li><li>404: 대상 없음 또는 소유자가 아닌 관리 요청</li><li>409: 사용자 이름 중복·재시도키 본문 충돌·유효하지 않은 점유</li><li>413: 본문 크기 초과</li><li>415: Content-Type 확인</li><li>429: 사용량 한도 초과, 잠시 후 재시도</li><li>503: 저장소 일시 오류, 같은 요청키로 재시도</li></ul><p>연결 확인은 인증 없는 GET /health를 사용하세요.</p></section><footer class="page-footer"><span>Muse Relay API · v2.0</span><a href="/">Muse 연결하기 ↗</a></footer></main></body></html>
+VM에 보낼 문장</code>
+</pre>
+<p>현재 기존 /send도 키 없이 사용할 수 있습니다. /messages 내역은 기존 관리자 인증, /claim과 /messages/{id}/ack는 기존 VM키를 사용합니다.</p><a class="secondary" href="https://vm-https-check-production.up.railway.app/legacy">기존 VM 전송 화면 ↗</a>
+</section>
+<section id="errors" class="doc-section">
+<h2>오류 응답</h2>
+<ul>
+<li>400: 비어 있는 문장이나 잘못된 입력</li>
+<li>401: 로그인·기기 인증 필요 또는 만료된 연결 코드</li>
+<li>403: 관리 요청 Origin 확인</li>
+<li>404: 대상 없음 또는 소유자가 아닌 관리 요청</li>
+<li>409: 사용자 이름 중복·재시도키 본문 충돌·유효하지 않은 점유</li>
+<li>413: 본문 크기 초과</li>
+<li>415: Content-Type 확인</li>
+<li>429: 사용량 한도 초과, 잠시 후 재시도</li>
+<li>503: 저장소 일시 오류, 같은 요청키로 재시도</li>
+</ul>
+<p>연결 확인은 인증 없는 GET /health를 사용하세요.</p>
+</section>
+</div>
+</div>
+</main>
+<footer class="site-footer"><span>Muse Relay · API reference</span><a href="/openapi.json">OpenAPI 3.1 명세 ↗</a><a href="/">내 Muse 연결하기 ↗</a>
+</footer>
+</body>
+</html>
