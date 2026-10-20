@@ -18,10 +18,10 @@
     invalid_credentials:'사용자 이름과 비밀번호를 확인해주세요.', username_unavailable:'이미 사용 중인 이름입니다.',
     username_lowercase_letters_digits_underscore_3_to_32:'사용자 이름은 영문 소문자·숫자·밑줄 3–32자로 입력해주세요.',
     password_12_to_128_characters:'비밀번호는 12–128자로 입력해주세요.', login_required:'로그인이 필요합니다.',
-    rate_limit_try_again_later:'잠시 후 다시 시도해주세요. 요청이 너무 많습니다.', maximum_3_muses_per_account:'계정당 Muse는 최대 3개입니다.',
+    rate_limit_try_again_later:'잠시 후 다시 시도해주세요. 요청이 너무 많습니다.', maximum_3_muses_per_account:'계정당 수신함은 최대 3개입니다.',
     muse_pending_limit_1000:'대기 메시지가 1,000개입니다. 연결된 기기가 처리한 뒤 다시 보내주세요.',
-    muse_name_1_to_60_characters:'Muse 이름은 1–60자로 입력해주세요.', message_limit_16384_bytes:'문장은 UTF-8 기준 16KB까지 보낼 수 있습니다.',
-    message_text_required:'전달할 문장을 입력해주세요.', muse_not_found:'Muse를 찾을 수 없습니다.', same_origin_required:'페이지를 새로고침한 뒤 다시 시도해주세요.', invalid_sender_key:'송신 API 키가 없거나 유효하지 않습니다.', public_sending_removed:'공개 수신은 지원하지 않습니다.'
+    muse_name_1_to_60_characters:'수신함 이름은 1–60자로 입력해주세요.', message_limit_16384_bytes:'문장은 UTF-8 기준 16KB까지 보낼 수 있습니다.',
+    message_text_required:'전달할 문장을 입력해주세요.', muse_not_found:'수신함을 찾을 수 없습니다.', same_origin_required:'페이지를 새로고침한 뒤 다시 시도해주세요.', invalid_sender_key:'송신 API 키가 없거나 유효하지 않습니다.', public_sending_removed:'공개 수신은 지원하지 않습니다.'
   };
   async function api(path, {method='GET',body,plain=false,key}={}) {
     const headers={};
@@ -46,8 +46,8 @@ Authorization: Bearer ${key}
 Content-Type: text/plain; charset=utf-8
 본문: 보내고 싶은 문장 그대로
 
-서버가 API 키로 대상 Muse를 찾습니다. Muse ID·JSON·직접 만드는 메시지 ID는 필요 없습니다.
-이 키는 이 Muse로 전송만 허용합니다. 공개 게시물이나 브라우저 프런트엔드 소스에 넣지 말고, 신뢰하는 송신 프로그램의 비밀 설정에 보관하세요.
+서버가 API 키로 수신함을 찾고, 그 수신함에 연결된 Muse의 VM으로 전달합니다. Muse ID·JSON·직접 만드는 메시지 ID는 필요 없습니다.
+이 키는 이 수신함으로 전송만 허용합니다. 공개 게시물이나 브라우저 프런트엔드 소스에 넣지 말고, 신뢰하는 송신 프로그램의 비밀 설정에 보관하세요.
 
 JavaScript (서버 또는 신뢰하는 실행 환경):
 const response = await fetch('${apiUrl()}', {
@@ -65,7 +65,7 @@ console.log(await response.json());
 성공: HTTP 201, {"id":"msg-자동생성값","created":true}
 HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 키를 받으세요.
 서버 접수, localhost 수신기 ACK, Meta AI 읽기·실행은 서로 다릅니다.
-문장 최대 16KB, Muse당 분당 60건. 자동 재시도는 같은 본문과 같은 Idempotency-Key로 하세요. 키 교체로 대상 Muse는 바뀌지 않습니다.
+문장 최대 16KB, 수신함당 분당 60건. 자동 재시도는 같은 본문과 같은 Idempotency-Key로 하세요. 키를 교체해도 수신함과 연결된 Muse는 바뀌지 않습니다.
 다른 Codex: 사용자가 보내달라고 요청한 문장을 위 API로 POST하세요. 인증키는 Authorization 헤더에만 넣고 URL·본문·로그에는 출력하지 마세요. 스킬 설치는 필요하지 않습니다.`; }
   function clearSenderSecret() {
     senderSecret=null;$('sender-key').value='';$('sender-fallback').value='';show('sender-fallback-box',false);
@@ -82,7 +82,7 @@ HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 �
     $('revoke-sender-key').disabled=!meta.active||senderJobs.has(m.id);
     $('copy-sender-key').disabled=!available||senderJobs.has(m.id);
     $('copy-instructions').disabled=!available||senderJobs.has(m.id);
-    $('sender-key-help').textContent=available?'지금 키와 사용법을 복사해 안전하게 보관하세요. 페이지를 새로고침하거나 다른 Muse를 선택하면 원문을 다시 볼 수 없습니다.':'키 원문은 발급 직후에만 복사할 수 있습니다. 보관한 키를 잃어버리면 교체하세요. 기존 키는 교체 즉시 사용할 수 없습니다.';
+    $('sender-key-help').textContent=available?'지금 키와 사용법을 복사해 안전하게 보관하세요. 페이지를 새로고침하거나 다른 수신함을 선택하면 원문을 다시 볼 수 없습니다.':'키 원문은 발급 직후에만 복사할 수 있습니다. 보관한 키를 잃어버리면 교체하세요. 기존 키는 교체 즉시 사용할 수 없습니다.';
   }
   async function copySender(text) {
     const mid=state.selected.id, epoch=setupSelection, secret=senderSecret, mutation=senderMutation;
@@ -98,7 +98,7 @@ HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 �
       const result=await api(`/api/muses/${mid}/sender-key${revoke?'/revoke':''}`,{method:'POST',body:{}});
       const meta=revoke?{active:false}:result.sender_key;
       state.muses=state.muses.map(item=>item.id===mid?{...item,sender_key:meta}:item);
-      if(state.selected?.id!==mid||setupSelection!==epoch){notice('송신 키 변경을 완료했습니다. 해당 Muse를 다시 선택해 상태를 확인하세요. 키 원문을 보관하지 못했다면 교체하세요.');return;}
+      if(state.selected?.id!==mid||setupSelection!==epoch){notice('송신 키 변경을 완료했습니다. 해당 수신함을 다시 선택해 상태를 확인하세요. 키 원문을 보관하지 못했다면 교체하세요.');return;}
       state.selected={...state.selected,sender_key:meta};
       if(!revoke)senderSecret={mid,key:result.key,version:meta.version};
       notice(revoke?'송신 키를 폐기했습니다.':'송신 API 키를 발급했습니다. 지금 복사해 보관하세요.');
@@ -146,7 +146,7 @@ HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 �
   }
   $('create-form').addEventListener('submit',async event=>{
     event.preventDefault();const button=event.currentTarget.querySelector('button');button.disabled=true;
-    try { const {muse}=await api('/api/muses',{method:'POST',body:{name:$('muse-name').value}});$('muse-name').value='';state.selected=muse;await renderHome();notice('Muse를 만들었습니다. 연결 프롬프트를 복사해 Muse 대화에 붙여넣으세요.');$('copy-muse-prompt').focus(); }
+    try { const {muse}=await api('/api/muses',{method:'POST',body:{name:$('muse-name').value}});$('muse-name').value='';state.selected=muse;await renderHome();notice('수신함을 만들었습니다. 연결 프롬프트를 복사해 Muse 대화에 붙여넣으세요.');$('copy-muse-prompt').focus(); }
     catch(error){notice(error.message,true);}finally{button.disabled=false;}
   });
   async function selectMuse(m) {
@@ -155,12 +155,12 @@ HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 �
   function renderManage(){const m=state.selected;$('manage-name').textContent=m.name;$('web-url').textContent=webUrl(m.id);$('api-url').textContent=apiUrl(m.id);$('open-public').href=webUrl(m.id);$('device-status').textContent=deviceText(m)+(m.last_seen?' · 최근 '+date(m.last_seen):'');$('revoke-device').disabled=!m.device_connected;renderOnboarding();renderSetup();renderSender();}
   function renderOnboarding(){
     const m=state.selected;if(!m)return;const test=connectionTest.read(m.id);
-    const checks=[['Muse 등록',true],['VM 연결',m.device_connected],['테스트 문장 접수',Boolean(test.messageId)],['수신기 ACK',test.status==='acked']];
+    const checks=[['수신함 만들기',true],['VM 연결',m.device_connected],['테스트 문장 접수',Boolean(test.messageId)],['수신기 ACK',test.status==='acked']];
     $('onboarding-list').replaceChildren(...checks.map(([label,done],i)=>el('li',(done?'✓':String(i+1).padStart(2,'0'))+'  '+label,done?'done':'')));
     $('send-test').disabled=test.busy;
     $('send-test').textContent=test.busy?'접수 확인 중…':test.pending?'같은 테스트 다시 확인 ↗':test.messageId&&test.status!=='acked'?'새 테스트 문장 보내기 ↗':'테스트 문장 보내기 ↗';
     $('test-status').textContent=test.busy?'테스트 문장의 접수를 확인하는 중입니다…':test.pending?'접수 결과를 확인하지 못했습니다.':test.status==='acked'?'이 테스트 문장의 localhost 수신기 도착 확인 ✓':test.messageId?'테스트 문장을 접수했습니다. 수신기 ACK 대기 중.':'테스트 문장을 아직 보내지 않았습니다.';
-    $('test-detail').textContent=test.pending?'같은 키와 문장으로 다시 확인합니다. 중복 접수를 막습니다.':test.messageId?test.messageId+' · '+(test.status==='acked'?'이 ID의 수신 기록입니다. 새 기기를 연결했다면 새 테스트를 보내세요. Meta AI의 읽기·실행은 별도로 확인하세요.':'기기 온라인이어도 수신기가 응답할 때까지 기다립니다.'):'버튼을 누를 때만 선택한 Muse로 테스트 문장을 보냅니다.';
+    $('test-detail').textContent=test.pending?'같은 키와 문장으로 다시 확인합니다. 중복 접수를 막습니다.':test.messageId?test.messageId+' · '+(test.status==='acked'?'이 ID의 수신 기록입니다. 새 기기를 연결했다면 새 테스트를 보내세요. Meta AI의 읽기·실행은 별도로 확인하세요.':'기기 온라인이어도 수신기가 응답할 때까지 기다립니다.'):'버튼을 누를 때만 선택한 수신함으로 테스트 문장을 보냅니다.';
   }
   $('send-test').addEventListener('click',async()=>{
     if(!state.selected)return;const mid=state.selected.id;
@@ -184,7 +184,7 @@ HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 �
       $('setup-status').textContent=`Muse에 붙여넣기 · 유효 시간 ${Math.floor(seconds/60)}분 ${seconds%60}초 · 일회용`;
     }else{
       $('setup-prompt').value='';$('pair-value').textContent='';$('setup-preview').open=false;
-      $('setup-status').textContent=busy?'선택한 Muse의 연결 정보를 준비하고 있습니다.':muse.device_connected?'VM이 연결되어 있습니다. 다시 연결할 때만 새 프롬프트를 만드세요.':'유효한 프롬프트가 없습니다. 새로 만들어 Muse에게 전달하세요.';
+      $('setup-status').textContent=busy?'선택한 수신함의 연결 정보를 준비하고 있습니다.':muse.device_connected?'VM이 연결되어 있습니다. 다시 연결할 때만 새 프롬프트를 만드세요.':'유효한 프롬프트가 없습니다. 새로 만들어 Muse에게 전달하세요.';
     }
   }
   async function copySetupText(text,muse,record) {
@@ -254,7 +254,7 @@ HTTP 401: 키 누락·오류·교체·폐기. 소유자에게 유효한 송신 �
   function pendingSave(value){state.pending=value;try{if(value)sessionStorage.setItem('muse-pending:'+publicId,JSON.stringify(value));else sessionStorage.removeItem('muse-pending:'+publicId);}catch(_){} }
   function sendingState(){const pending=Boolean(state.pending);$('message').readOnly=pending;$('send-button').textContent=pending?'같은 요청 다시 확인 ↗':'Muse로 전송 ↗';$('send-button').disabled=state.sending||!state.owner;show('abandon-send',pending);}
   async function publicPage(){
-    try{const {muse}=await api('/api/muses/'+publicId);state.publicMuse=muse;state.owner=Boolean(muse.created);show('public-page');$('public-name').textContent=muse.name+'에게 보내기';document.title=muse.name+' · Muse Relay';$('public-badge').textContent='소유자 전용';show('private-notice',!state.owner);$('message').disabled=!state.owner;
+    try{const {muse}=await api('/api/muses/'+publicId);state.publicMuse=muse;state.owner=Boolean(muse.created);show('public-page');$('public-name').textContent=muse.name+' 수신함';document.title=muse.name+' · Muse Relay';$('public-badge').textContent='소유자 전용';show('private-notice',!state.owner);$('message').disabled=!state.owner;
       try{const saved=JSON.parse(sessionStorage.getItem('muse-pending:'+publicId));if(saved&&typeof saved.text==='string'&&typeof saved.key==='string'){state.pending=saved;$('message').value=saved.text;notice('이전 전송의 응답을 확인하지 못했습니다. 같은 요청으로 다시 확인할 수 있습니다.');}}catch(_){}
       sendingState();byteCount();
     }catch(error){if(error.status===401){show('public-page');show('private-notice');$('public-badge').textContent='소유자 로그인 필요';$('message').disabled=true;sendingState();}else if(error.status===404)show('not-found');else notice(error.message,true);}

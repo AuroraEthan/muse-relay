@@ -26,9 +26,9 @@
 <div><span class="eyebrow">YOUR WORDS. A CLEAR WAY THROUGH.</span>
 <h1>Muse의 클라우드 VM에,<br>어디서든 한 문장.</h1>
 <p class="hero-copy">외부 프로그램에서, Codex에서, 내 서비스에서.<br>보낸 문장을 모아 Muse의 클라우드 VM으로 전달하세요.</p>
-<div class="hero-actions"><a href="#signup" class="primary">내 Muse 연결하기 ↗</a><a href="#how-it-works" class="text-link">어떻게 연결되나요? ↓</a>
+<div class="hero-actions"><a href="#signup" class="primary">수신함 만들기 ↗</a><a href="#how-it-works" class="text-link">어떻게 연결되나요? ↓</a>
 </div>
-<p class="hero-foot">여기서 Muse는 Meta AI를 뜻합니다.<br>연결 프롬프트를 복사해 Muse에게 붙여넣으세요.</p>
+<p class="hero-foot">여기서 Muse는 Meta AI를 뜻합니다.<br>수신함을 만들고, 연결할 Muse 대화에 프롬프트를 붙여넣으세요.</p>
 </div>
 <div class="route-illustration">
 <div class="route-top"><span>문장이 이동하는 경로 · 예시</span><span>↗</span>
@@ -57,7 +57,7 @@
 <div class="use-list">
 <article><span>01 / 브라우저</span>
 <h3>떠오른 생각을 전송 페이지에</h3>
-<p>소유자 계정으로 로그인해 웹에서 문장을 보내세요. 외부 프로그램은 Muse별 송신 API 키로 연결합니다.</p>
+<p>소유자 계정으로 로그인해 웹에서 문장을 보내세요. 외부 프로그램은 수신함별 송신 API 키로 연결합니다.</p>
 </article>
 <article><span>02 / Codex</span>
 <h3>다른 작업에서 나온 맥락도</h3>
@@ -73,8 +73,8 @@
 <h2>세 단계로 연결을 준비하세요.</h2>
 <div class="steps-grid">
 <article><b>01</b>
-<h3>계정과 Muse 만들기</h3>
-<p>이름을 정하고 Muse별 송신 API 키를 발급하세요. 공통 API가 키로 대상 Muse를 찾습니다.</p>
+<h3>계정과 수신함 만들기</h3>
+<p>이름을 정하고 수신함별 송신 API 키를 발급하세요. 공통 API가 키로 수신함을 찾고, 연결된 Muse의 VM으로 전달합니다.</p>
 </article>
 <article><b>02</b>
 <h3>프롬프트를 Muse에게 전달하기</h3>
@@ -94,19 +94,19 @@
 <div>
 <details>
 <summary>Meta AI 계정을 연결하는 서비스인가요?</summary>
-<p>Muse는 클라우드 환경에서 작업하는 AI 인터페이스입니다. 당신은 연결 프롬프트를 Muse에게 전달하고, Muse는 자신의 환경을 확인해 수신함과 연결 프로그램을 준비합니다. Relay는 문장을 그 수신함으로 전달합니다. 실제 Muse의 읽기·작업 결과는 Muse에게 확인하세요.</p>
+<p>여기서는 문장을 보관할 수신함을 만듭니다. 그 수신함의 연결 프롬프트를 원하는 Muse 대화에 붙여넣으면, 그 Muse가 자신의 클라우드 VM을 연결합니다. Meta AI 계정을 검색하거나 웹에서 원격 Muse를 고르는 과정은 없습니다. 실제 Muse의 읽기·작업 결과는 Muse에게 확인하세요.</p>
 </details>
 <details>
 <summary>미리 준비할 것은 무엇인가요?</summary>
 <p>Muse와 대화할 수 있으면 시작할 수 있습니다. 프롬프트가 Muse에게 터미널·Python 3.10 이상·네트워크·수신함을 확인하도록 요청합니다. 필요한 도구를 사용할 수 없는 환경이면 Muse가 제약을 알려주도록 안내합니다.</p>
 </details>
 <details>
-<summary>어떤 Muse에게 보내는지 어떻게 구분하나요?</summary>
-<p>Muse마다 다른 송신 API 키를 발급합니다. 공통 API에 키와 문장을 보내면 그 키에 연결된 Muse로 전달됩니다. 주소만으로는 보낼 수 없습니다. 송신 키로는 내역 조회나 기기 관리를 할 수 없으며, 소유자가 키를 교체하거나 폐기할 수 있습니다.</p>
+<summary>어떤 Muse와 연결되는 건가요?</summary>
+<p>연결 프롬프트를 붙여넣은 대화의 Muse가 이 수신함과 연결됩니다. 수신함마다 송신 API 키를 발급하며, 공통 API에 키와 문장을 보내면 해당 수신함을 거쳐 연결된 Muse의 VM으로 전달됩니다. 주소만으로는 보낼 수 없습니다. 송신 키로는 내역 조회나 기기 관리를 할 수 없으며, 소유자가 키를 교체하거나 폐기할 수 있습니다.</p>
 </details>
 <details>
 <summary>VM이 재시작해도 다시 연결되나요?</summary>
-<p>쉬는 동안 문장은 서버 대기열에 남습니다. 연결 프롬프트는 Muse에게 영구 저장 경로와 부팅 시 자동 시작을 설정하고, 수신기·중계기·메시지 처리를 재개하도록 요청합니다. 정상 재시작과 복구는 로그에만 남기고, 사용자 조치가 필요한 장애만 알리도록 안내합니다. 실제 자동 시작 지원과 복구 검증 결과는 Muse가 확인해야 합니다. 수신기 ACK는 Muse의 작업 완료와 별도입니다. 문장 16KiB, Muse당 분당 60건·대기 1,000개까지 지원합니다.</p>
+<p>쉬는 동안 문장은 서버 대기열에 남습니다. 연결 프롬프트는 Muse에게 영구 저장 경로와 부팅 시 자동 시작을 설정하고, 수신기·중계기·메시지 처리를 재개하도록 요청합니다. 정상 재시작과 복구는 로그에만 남기고, 사용자 조치가 필요한 장애만 알리도록 안내합니다. 실제 자동 시작 지원과 복구 검증 결과는 Muse가 확인해야 합니다. 수신기 ACK는 Muse의 작업 완료와 별도입니다. 문장 16KiB, 수신함당 분당 60건·대기 1,000개까지 지원합니다.</p>
 </details>
 </div>
 </section>
@@ -127,18 +127,18 @@
 <h2>연결은 한 번.<br>전달은 어디서든.</h2>
 <ol>
 <li><b>01</b>
-<div><strong>Muse 등록</strong>
+<div><strong>수신함 만들기</strong>
 <p>이름을 정하고 송신 키를 발급합니다.</p>
 </div>
 </li>
 <li><b>02</b>
 <div><strong>Muse의 클라우드 VM 연결</strong>
-<p>Muse VM 안의 연결 프로그램에 일회용 코드를 입력하세요.</p>
+<p>연결할 Muse 대화에 수신함의 연결 프롬프트를 붙여넣으세요.</p>
 </div>
 </li>
 <li><b>03</b>
 <div><strong>문장 보내기</strong>
-<p>송신 API 키와 문장만 보내세요. 서버가 대상 Muse를 찾습니다.</p>
+<p>송신 API 키와 문장만 보내세요. 서버가 키로 수신함을 찾습니다.</p>
 </div>
 </li>
 </ol>
@@ -150,29 +150,29 @@
 <div class="page-title">
 <div>
 <div class="eyebrow" id="account-label">YOUR WORKSPACE</div>
-<h1>나의 Muse</h1>
+<h1>나의 수신함</h1>
 <p>프롬프트를 Muse에게 전달하고 첫 문장의 도착을 확인하세요.</p>
-</div><span class="pill">계정당 Muse 3개</span>
+</div><span class="pill">계정당 수신함 3개</span>
 </div>
 <section class="panel new-muse">
 <div>
-<h2>새 Muse 등록</h2>
-<p class="small">연결할 Muse의 클라우드 VM 이름을 정하세요.</p>
+<h2>새 수신함 만들기</h2>
+<p class="small">문장을 받을 수신함의 이름을 정하세요. 연결할 Muse는 프롬프트를 붙여넣는 대화에서 정해집니다.</p>
 </div>
-<form id="create-form"><label class="sr-only" for="muse-name">Muse 이름</label><input id="muse-name" maxlength="60" placeholder="예: 작업실 Muse" required><button class="primary">Muse 만들기 +</button>
+<form id="create-form"><label class="sr-only" for="muse-name">수신함 이름</label><input id="muse-name" maxlength="60" placeholder="예: 작업실 수신함" required><button class="primary">수신함 만들기 +</button>
 </form>
 </section>
 <div id="muse-cards" class="muse-cards">
 </div>
 <div id="empty-muses" class="empty hidden">
 <div class="empty-mark">m↗</div>
-<h2>첫 Muse를 기다리고 있어요.</h2>
-<p>위에서 Muse를 등록하고 연결 프롬프트와 송신 API 키를 준비하세요.</p>
+<h2>첫 수신함을 만들어보세요.</h2>
+<p>위에서 수신함을 만들고 연결 프롬프트와 송신 API 키를 준비하세요.</p>
 </div>
 <section id="manage" class="hidden">
 
 <div class="section-title">
-<div><span class="eyebrow">MUSE DETAILS</span>
+<div><span class="eyebrow">INBOX DETAILS</span>
 <h2 id="manage-name">
 </h2>
 </div><a id="open-public" class="secondary" target="_blank" rel="noopener">소유자 전송 화면 ↗</a>
@@ -183,14 +183,14 @@
 <h2>Muse에게 붙여넣으면 시작됩니다.</h2>
 <p>당신은 프롬프트만 전달하세요. Muse가 자신의 클라우드 환경에서 연결을 진행하도록 필요한 정보를 담아드립니다.</p>
 <ol class="prompt-steps">
-<li><b>1</b><div><strong>연결 프롬프트 복사</strong><span>선택한 Muse의 서버 주소와 10분 일회용 코드가 자동으로 들어갑니다.</span></div></li>
+<li><b>1</b><div><strong>연결 프롬프트 복사</strong><span>선택한 수신함의 서버 주소와 10분 일회용 코드가 자동으로 들어갑니다.</span></div></li>
 <li><b>2</b><div><strong>Muse 대화에 붙여넣기</strong><span>Muse가 연결과 부팅 시 자동 시작, 수신함 확인·메시지 처리 재개를 설정하고 검증합니다.</span></div></li>
 <li><b>3</b><div><strong>이 화면에서 도착 확인</strong><span>Muse가 준비됐다고 알려주면 ‘테스트 문장 보내기’를 눌러주세요.</span></div></li>
 </ol>
 <p class="help">재시작 후에도 이어서: 저장된 설정과 처리 기록으로 복구하도록 요청합니다. 정상 복구는 조용히, 사용자 조치가 필요한 장애만 알리도록 안내합니다. 실제 적용 결과는 Muse가 확인합니다.</p>
 <button id="copy-muse-prompt" class="primary wide" type="button">연결 프롬프트 만들고 복사 ↗</button>
 <p id="setup-status" class="setup-status" role="status" aria-live="polite">프롬프트를 만들어 Muse에게 전달하세요.</p>
-<p class="help">일회용 코드는 연결할 Muse에게만 전달하세요. 연결할 때 기존 기기 연결은 교체됩니다. 장기 기기키와 비밀번호는 프롬프트에 포함되지 않습니다.</p>
+<p class="help">일회용 코드는 연결할 Muse 대화에만 전달하세요. 연결할 때 기존 기기 연결은 교체됩니다. 장기 기기키와 비밀번호는 프롬프트에 포함되지 않습니다.</p>
 <div id="setup-ready" class="hidden">
 <details id="setup-preview" class="connection-detail"><summary>프롬프트 내용 보기 · 직접 복사</summary>
 <label for="setup-prompt">Muse에게 전달할 전체 프롬프트</label>
@@ -217,22 +217,22 @@
 <div class="panel share-box">
 <div class="step-number">02 / SEND WITH API</div>
 <h2>키와 문장만 보내세요.</h2>
-<p class="small">이 Muse의 송신 API 키로 대상을 구분합니다. 주소만으로는 전송할 수 없습니다.</p>
+<p class="small">이 수신함의 송신 API 키로 대상을 구분합니다. 주소만으로는 전송할 수 없습니다.</p>
 <label>공통 API 주소</label>
 <div class="code-row"><code id="api-url"></code><button id="copy-api" class="quiet">주소 복사</button></div>
-<p class="help">POST · Authorization: Bearer 송신키<br>Content-Type: text/plain; charset=utf-8<br>본문에 문장만 넣으세요. 대상 Muse·ID·JSON은 서버가 처리합니다.</p>
+<p class="help">POST · Authorization: Bearer 송신키<br>Content-Type: text/plain; charset=utf-8<br>본문에 문장만 넣으세요. 대상 수신함·ID·JSON은 서버가 처리합니다.</p>
 <div class="settings">
-<h3>이 Muse의 송신 API 키</h3>
+<h3>이 수신함의 송신 API 키</h3>
 <p id="sender-key-status" class="small" role="status">발급 상태 확인 중</p>
 <label class="sr-only" for="sender-key">발급된 송신 API 키</label>
 <input id="sender-key" type="password" readonly autocomplete="off" placeholder="키 원문은 발급 직후에만 복사할 수 있습니다.">
 <p id="sender-key-help" class="help"></p>
 <div class="hero-actions"><button id="issue-sender-key" class="primary" type="button">송신 API 키 발급</button><button id="copy-sender-key" class="secondary" type="button" disabled>키 복사</button><button id="revoke-sender-key" class="quiet danger" type="button" disabled>키 폐기</button></div>
-<p class="help">키는 이 Muse로 전송만 허용합니다. 신뢰하는 송신 프로그램의 비밀 설정에 보관하세요. 키 교체·폐기는 Muse 수신 연결이나 기존 메시지에 영향을 주지 않습니다.</p>
+<p class="help">키는 이 수신함으로 전송만 허용합니다. 신뢰하는 송신 프로그램의 비밀 설정에 보관하세요. 키 교체·폐기는 Muse 수신 연결이나 기존 메시지에 영향을 주지 않습니다.</p>
 <button id="copy-instructions" class="secondary wide" type="button" disabled>Codex·외부 프로그램용 사용법 복사 (키 포함)</button>
 <div id="sender-fallback-box" class="hidden"><label for="sender-fallback">직접 복사할 송신 정보 · 비밀 키 포함</label><textarea id="sender-fallback" readonly rows="9" spellcheck="false"></textarea></div>
 </div>
-<details class="connection-detail"><summary>소유자 웹에서 직접 전송</summary><p class="help">로그인한 소유자만 이 Muse에 문장을 보낼 수 있습니다.</p><div class="code-row"><code id="web-url"></code><button id="copy-web" class="quiet">주소 복사</button></div></details>
+<details class="connection-detail"><summary>소유자 웹에서 직접 전송</summary><p class="help">로그인한 소유자만 이 수신함에 문장을 보낼 수 있습니다.</p><div class="code-row"><code id="web-url"></code><button id="copy-web" class="quiet">주소 복사</button></div></details>
 </div>
 </div>
 <section class="onboarding" aria-labelledby="onboarding-title">
@@ -244,7 +244,7 @@
 </ol>
 <div class="test-line">
 <div><strong id="test-status" role="status" aria-live="polite">테스트 문장을 아직 보내지 않았습니다.</strong>
-<p id="test-detail">버튼을 누를 때만 선택한 Muse로 테스트 문장을 보냅니다.</p>
+<p id="test-detail">버튼을 누를 때만 선택한 수신함으로 테스트 문장을 보냅니다.</p>
 </div><button id="send-test" class="primary" type="button">테스트 문장 보내기 ↗</button>
 </div>
 </section>
@@ -267,8 +267,8 @@
 <div class="public-intro">
 <div class="eyebrow">A MESSAGE FOR YOUR MUSE</div>
 <div class="public-avatar">m↗</div>
-<h1 id="public-name">Muse에게 보내기</h1>
-<p id="public-description">문장을 입력하면 이 Muse의 클라우드 VM 안에 있는 수신기로 전달합니다.</p><span id="public-badge" class="pill">연결 확인 중</span>
+<h1 id="public-name">수신함에 보내기</h1>
+<p id="public-description">문장을 입력하면 이 수신함에 연결된 Muse의 클라우드 VM 안으로 전달합니다.</p><span id="public-badge" class="pill">연결 확인 중</span>
 </div>
 <div class="public-grid">
 <section class="panel send-panel">
@@ -292,19 +292,19 @@
 <li>Muse의 클라우드 VM이 가져감</li>
 <li>VM 내부 localhost 수신함에 전달</li>
 </ol>
-<p class="small muted">기기가 꺼져 있으면 큐에서 기다립니다. 서버 접수는 수신기 ACK와 다릅니다. Meta AI의 읽기·실행은 별도로 확인하세요.</p><a class="secondary wide" href="/">관리 화면에서 송신 키 발급</a><a class="text-link small" href="/">내 Muse VM도 연결하기 ↗</a>
+<p class="small muted">기기가 꺼져 있으면 큐에서 기다립니다. 서버 접수는 수신기 ACK와 다릅니다. Meta AI의 읽기·실행은 별도로 확인하세요.</p><a class="secondary wide" href="/">관리 화면에서 송신 키 발급</a><a class="text-link small" href="/">내 수신함 만들기 ↗</a>
 </aside>
 </div>
 </section>
 <section id="not-found" class="empty hidden">
-<h1>Muse를 찾을 수 없습니다.</h1>
+<h1>수신함을 찾을 수 없습니다.</h1>
 <p>전송 주소를 다시 확인해주세요.</p><a href="/" class="secondary">홈으로</a>
 </section>
 <div id="loading" class="empty">
-<p>Muse를 불러오는 중…</p>
+<p>수신함을 불러오는 중…</p>
 </div>
 </main>
-<footer class="site-footer"><span>Muse Relay · 문장을 Muse의 VM으로.</span><a href="/api-docs">API 사용법 ↗</a><span>초기 공개 버전 · 문장 16KB · Muse당 분당 60건</span>
+<footer class="site-footer"><span>Muse Relay · 문장을 Muse의 VM으로.</span><a href="/api-docs">API 사용법 ↗</a><span>초기 공개 버전 · 문장 16KB · 수신함당 분당 60건</span>
 </footer>
 <dialog id="message-dialog">
 <div class="panel-heading">

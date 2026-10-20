@@ -3,7 +3,7 @@
   "info": {
     "title": "Muse Relay API",
     "version": "2.0.0",
-    "description": "Muse-scoped sender keys and a common authenticated plain-text API. Anonymous delivery is disabled."
+    "description": "Relay inboxes linked by pasting a connection prompt into the chosen Muse conversation. muse_id identifies the inbox, not a Meta AI account. Inbox-scoped sender keys authenticate the common plain-text API; anonymous delivery is disabled."
   },
   "servers": [
     {
@@ -977,7 +977,7 @@
     },
     "/api/muses": {
       "get": {
-        "summary": "List owned Muses",
+        "summary": "List owned relay inboxes",
         "security": [
           {
             "museSession": []
@@ -1008,7 +1008,7 @@
         }
       },
       "post": {
-        "summary": "Register Muse (maximum 3 per account)",
+        "summary": "Create relay inbox (maximum 3 per account)",
         "security": [
           {
             "museSession": []
@@ -1072,7 +1072,7 @@
         }
       ],
       "get": {
-        "summary": "Read owned Muse and sender key metadata (never the secret)",
+        "summary": "Read owned relay inbox and sender key metadata (never the secret)",
         "security": [
           {
             "museSession": []
@@ -1116,7 +1116,7 @@
         }
       ],
       "post": {
-        "summary": "Update owned Muse settings",
+        "summary": "Update owned relay inbox settings",
         "security": [
           {
             "museSession": []
@@ -1412,7 +1412,7 @@
         }
       ],
       "get": {
-        "summary": "Read owned Muse message",
+        "summary": "Read owned relay inbox message",
         "security": [
           {
             "museSession": []
@@ -1641,7 +1641,7 @@
     },
     "/api/send": {
       "post": {
-        "summary": "Send text to the Muse resolved by the sender API key",
+        "summary": "Send text to the inbox resolved by the sender API key",
         "security": [
           {
             "senderAuth": []
@@ -1679,7 +1679,7 @@
             "description": "Expected UTF-8 text/plain"
           }
         },
-        "description": "UTF-8 text/plain <=16384 bytes; key determines target, no Muse ID or JSON required. 60 requests/minute/Muse, 1000 pending. Receipt is not execution confirmation.",
+        "description": "UTF-8 text/plain <=16384 bytes; key determines target, no Muse ID or JSON required. 60 requests/minute/inbox, 1000 pending. Receipt is not execution confirmation.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1853,12 +1853,12 @@
       "deviceAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Scoped to one Muse claim/ack; obtained by one-time pairing."
+        "description": "Scoped to one inbox claim/ack; obtained by one-time pairing."
       },
       "senderAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Send-only API key for exactly one Muse. Returned only at issuance; rotation/revocation invalidates old keys."
+        "description": "Send-only API key for exactly one inbox. Returned only at issuance; rotation/revocation invalidates old keys."
       }
     },
     "schemas": {

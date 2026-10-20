@@ -15,22 +15,22 @@
 <header class="doc-heading">
 <div class="eyebrow">MUSE RELAY / DEVELOPER REFERENCE</div>
 <h1>문장 전송을,<br>내 프로그램에서도.</h1>
-<p>공통 API에 Muse별 송신 키와 평문을 보내세요. Relay 대기열에 접수한 문장을 Muse의 클라우드 VM이 폴링해 VM 내부 localhost 수신기로 전달합니다.</p>
+<p>공통 API에 수신함별 송신 키와 평문을 보내세요. Relay 대기열에 접수한 문장을 Muse의 클라우드 VM이 폴링해 VM 내부 localhost 수신기로 전달합니다.</p>
 </header>
 <div class="docs-layout">
 <nav class="docs-nav" aria-label="API 문서 목차"><a href="#getting-started">시작하기</a><a href="#plain-text">평문 POST</a><a href="#retries">재시도와 중복 방지</a><a href="#receiver">기기·수신기 연결</a><a href="#history">수신 상태·보관</a><a href="#auth">관리·기기 인증</a><a href="#legacy">기존 VM</a><a href="#errors">오류 응답</a>
 </nav>
 <div>
 <section id="getting-started" class="doc-section">
-<h2>1. 내 Muse의 송신 API 키 발급</h2>
-<p>홈에서 계정과 Muse를 만들고 ‘송신 API 키 발급’을 누르세요. 발급 직후 ‘Codex·외부 프로그램용 사용법 복사 (키 포함)’로 한 번에 복사할 수 있습니다. 키 원문은 다시 조회할 수 없으므로 안전한 비밀 설정에 보관하세요.</p>
+<h2>1. 수신함의 송신 API 키 발급</h2>
+<p>홈에서 계정과 수신함을 만들고 ‘송신 API 키 발급’을 누르세요. 발급 직후 ‘Codex·외부 프로그램용 사용법 복사 (키 포함)’로 한 번에 복사할 수 있습니다. 키 원문은 다시 조회할 수 없으므로 안전한 비밀 설정에 보관하세요.</p>
 <pre><code>POST /api/send
 Authorization: Bearer 발급받은송신키
 Content-Type: text/plain; charset=utf-8
 
 작업 결과를 정리해서 알려줘.</code>
 </pre>
-<p>서버가 송신 키로 대상 Muse를 찾습니다. Muse ID·JSON·직접 정하는 메시지 ID는 필요 없습니다. 키가 없거나 잘못됐거나 교체·폐기됐다면 HTTP 401입니다. 계정마다 Muse를 따로 관리하고 각 Muse는 서로 다른 송신 키를 사용합니다. 공개 수신은 지원하지 않습니다.</p><a class="secondary" href="/openapi.json">OpenAPI 3.1 명세 ↗</a>
+<p>서버가 송신 키로 수신함을 찾습니다. Muse ID·JSON·직접 정하는 메시지 ID는 필요 없습니다. 키가 없거나 잘못됐거나 교체·폐기됐다면 HTTP 401입니다. 계정마다 수신함을 따로 관리하고 각 수신함은 서로 다른 송신 키를 사용합니다. 공개 수신은 지원하지 않습니다.</p><a class="secondary" href="/openapi.json">OpenAPI 3.1 명세 ↗</a>
 </section>
 <section id="plain-text" class="doc-section">
 <h2>2. JavaScript 서버에서 보내기</h2>
@@ -52,7 +52,7 @@ console.log(await response.json());</code>
 <ul>
 <li>송신 API는 Authorization 헤더를 포함한 CORS를 허용합니다. 쿠키는 보내지 마세요. 키를 공개 프런트엔드 코드·URL·로그에 넣지 말고 신뢰하는 실행 환경의 MUSE_API_KEY로 보관하세요. 관리 API와 기기 API의 인증은 별도입니다.</li>
 <li>문장은 UTF-8 기준 최대 16,384 bytes이며, 빈 문장은 거절합니다.</li>
-<li>Muse마다 분당 60건, 미전달 메시지 최대 1,000개입니다. 초과 시 HTTP 429가 반환됩니다.</li>
+<li>수신함마다 분당 60건, 미전달 메시지 최대 1,000개입니다. 초과 시 HTTP 429가 반환됩니다.</li>
 <li>응답은 서버 접수 확인입니다. 기기 수신이나 Muse 작업 실행 완료를 뜻하지 않습니다.</li>
 </ul>
 </section>
@@ -64,10 +64,11 @@ console.log(await response.json());</code>
 <p>같은 키·본문이면 HTTP 200, created:false와 기존 ID를 반환합니다. 같은 키에 다른 본문이면 HTTP 409입니다. 네트워크 오류·5xx처럼 접수 여부가 불확실하거나 429인 경우 본문과 키를 유지해 재시도하세요. 확실한 입력 오류는 수정한 뒤 새 키로 요청하세요. 웹 전송 화면과 관리 화면의 테스트 버튼은 키를 자동 관리합니다. 완료 내역·키는 30일 보관 후 정리하므로, 오래된 요청을 다시 보내면 새 메시지가 될 수 있습니다.</p>
 </section>
 <section id="receiver" class="doc-section">
-<h2>4. 프롬프트를 Muse에게 붙여넣어 연결하기</h2>
-<p>Muse는 클라우드 작업 환경을 다루는 Meta AI 인터페이스입니다. 사용자는 터미널 설정 대신 관리 화면의 <strong>‘연결 프롬프트 만들고 복사’</strong>를 눌러 Muse 대화에 붙여넣으세요. 선택한 Muse의 실제 서버 주소·다운로드 주소·10분 일회용 코드와 수행 순서가 자동으로 들어갑니다.</p>
-<ol><li>계정과 Muse를 만든 뒤 연결 프롬프트를 복사합니다.</li><li>Muse에게 그대로 붙여넣습니다. Muse가 자신의 환경에서 수신함 준비·설치·연결과 부팅 시 자동 시작·메시지 처리 재개를 설정하도록 요청합니다.</li><li>Muse가 준비됐다고 알려주면 웹의 테스트 버튼을 누르고 수신기 ACK를 확인합니다.</li></ol>
-<p>유효한 프롬프트는 같은 코드로 다시 복사합니다. 새 발급은 이전 미사용 코드를 무효화합니다. 만료·사용된 코드는 새 프롬프트로 교체하세요. 일회용 코드는 연결할 Muse에게만 전달하고 장기 기기키·계정 비밀번호는 공유하지 마세요. 자동 복사가 차단되면 프롬프트 미리보기에서 전체 선택해 복사할 수 있습니다.</p>
+<h2>4. 원하는 Muse 대화에 붙여넣어 연결하기</h2>
+<p>웹에서는 수신함을 만듭니다. 그 수신함의 연결 프롬프트를 붙여넣은 대화의 Muse가 자신의 VM을 연결합니다. API의 muse_id는 Relay 수신함 ID이며 Meta AI 계정 ID가 아닙니다.</p>
+<p>Muse는 클라우드 작업 환경을 다루는 Meta AI 인터페이스입니다. 사용자는 터미널 설정 대신 관리 화면의 <strong>‘연결 프롬프트 만들고 복사’</strong>를 눌러 Muse 대화에 붙여넣으세요. 선택한 수신함의 실제 서버 주소·다운로드 주소·10분 일회용 코드와 수행 순서가 자동으로 들어갑니다.</p>
+<ol><li>계정과 수신함을 만든 뒤 연결 프롬프트를 복사합니다.</li><li>Muse에게 그대로 붙여넣습니다. Muse가 자신의 환경에서 수신함 준비·설치·연결과 부팅 시 자동 시작·메시지 처리 재개를 설정하도록 요청합니다.</li><li>Muse가 준비됐다고 알려주면 웹의 테스트 버튼을 누르고 수신기 ACK를 확인합니다.</li></ol>
+<p>유효한 프롬프트는 같은 코드로 다시 복사합니다. 새 발급은 이전 미사용 코드를 무효화합니다. 만료·사용된 코드는 새 프롬프트로 교체하세요. 일회용 코드는 연결할 Muse 대화에만 전달하고 장기 기기키·계정 비밀번호는 공유하지 마세요. 자동 복사가 차단되면 프롬프트 미리보기에서 전체 선택해 복사할 수 있습니다.</p>
 <p>Muse가 실제 터미널·Python 3.10 이상·네트워크·백그라운드 실행 도구를 사용할 수 있는지 확인하도록 안내합니다. 지원되지 않는 도구나 상시 실행을 보장하지 않습니다. 프롬프트는 영구 저장 경로에 설정과 메시지별 처리 기록을 보관하고, 재시작 후 수신기·중계기·Muse의 메시지 처리를 재개하도록 요청합니다. 정상 재시작·복구는 로그에만 남기고 사용자 조치가 필요한 지속 장애만 알리도록 안내합니다. Muse에게 실제 자동 시작 지원 여부와 복구 검증 결과를 확인하세요. 수신기 ACK는 Muse의 실제 읽기·작업 완료를 뜻하지 않습니다.</p>
 <details class="connection-detail"><summary>직접 설치하는 개발자를 위한 안내</summary>
 <p>관리 화면의 ‘직접 설정하기 · 고급 안내’를 펼쳐 ZIP 다운로드, 서버 주소가 포함된 connect 명령, 일회용 코드와 VM 내부 localhost URL을 사용하세요. <code>python3 muse_agent.py run</code>이 5초마다 조회합니다. HTTP 수신기는 JSON의 message를 영속 저장하고 중복 ID를 처리한 뒤 2xx를 반환해야 합니다. TCP는 받은 id와 ok:true를 JSON 한 줄로 반환합니다. 추가 Python 패키지는 필요 없습니다.</p>
@@ -78,7 +79,7 @@ console.log(await response.json());</code>
 <h2>5. 전달 내역과 데이터 보관</h2>
 <p>로그인한 소유자만 해당 Muse의 내역을 볼 수 있습니다. pending은 기기 대기, leased는 가져간 상태, acked(수신기 ACK)는 localhost의 성공 응답을 확인한 상태입니다. 기기 온라인 표시만으로 수신기 ACK를 대신할 수 없습니다. 관리 화면에서 테스트 문장을 직접 전송하면 그 메시지 ID의 ACK를 확인합니다. Meta AI의 읽기·작업 실행 결과는 관측하지 않습니다.</p>
 <p>HTTP 수신기는 payload.message로 문장을 받고, Idempotency-Key / X-Message-ID로 중복을 구분합니다. 성공 시 HTTP 2xx를 반환하세요. 응답 유실로 재전달될 수 있으므로 수신측에서도 중복을 방지해야 합니다.</p>
-<p>완료 기록은 30일 후 큐 접근 시 정리하며, 사용하지 않는 Muse도 매시간 정리합니다. 대기 메시지는 보관합니다. 계정당 Muse는 3개까지 만들 수 있습니다. 초기 공개 버전에는 비밀번호 복구·결제·팀 기능이 없습니다.</p>
+<p>완료 기록은 30일 후 큐 접근 시 정리하며, 사용하지 않는 Muse도 매시간 정리합니다. 대기 메시지는 보관합니다. 계정당 수신함은 3개까지 만들 수 있습니다. 초기 공개 버전에는 비밀번호 복구·결제·팀 기능이 없습니다.</p>
 </section>
 <section id="auth" class="doc-section">
 <h2>관리·기기 API</h2>
@@ -88,7 +89,7 @@ POST /api/auth/login    {"username":"사용자명","password":"비밀번호"}
 GET  /api/auth/me
 POST /api/auth/logout  {}
 GET  /api/muses
-POST /api/muses        {"name":"내 Muse"}
+POST /api/muses        {"name":"내 수신함"}
 GET  /api/muses/{muse_id}
 POST /api/muses/{muse_id}/settings       {"name":"새 이름"}
 POST /api/muses/{muse_id}/sender-key     {}  // 최초 발급·교체
@@ -99,7 +100,7 @@ GET  /api/muses/{muse_id}/messages/{id}
 POST /api/muses/{muse_id}/pairing        {}
 POST /api/muses/{muse_id}/device/revoke  {}</code>
 </pre>
-<p>송신 키 원문은 발급 응답의 key에 한 번만 반환하며 서버에는 해시만 저장합니다. Muse당 활성 키는 하나입니다. 교체 즉시 이전 키는 무효화되며 폐기하면 외부 전송이 중단됩니다. 기기 연결과 대기 메시지는 유지됩니다. 다른 Muse를 선택하거나 페이지를 새로고침하면 발급 원문은 지워집니다. 키를 잃어버렸다면 교체 후 모든 송신 프로그램의 설정을 갱신하세요.</p>
+<p>송신 키 원문은 발급 응답의 key에 한 번만 반환하며 서버에는 해시만 저장합니다. 수신함당 활성 키는 하나입니다. 교체 즉시 이전 키는 무효화되며 폐기하면 외부 전송이 중단됩니다. 기기 연결과 대기 메시지는 유지됩니다. 다른 수신함을 선택하거나 페이지를 새로고침하면 발급 원문은 지워집니다. 키를 잃어버렸다면 교체 후 모든 송신 프로그램의 설정을 갱신하세요.</p>
 <p>다음은 연결 프로그램 전용입니다. 코드 교환 후 발급받은 Bearer 기기키는 해당 Muse의 claim·ack만 허용합니다.</p>
 <pre><code>POST /api/pair  {"code":"10분연결코드"}
 POST /api/muses/{muse_id}/claim  {}
@@ -108,7 +109,7 @@ POST /api/muses/{muse_id}/messages/{id}/ack  {"lease_token":"점유토큰"}</cod
 </section>
 <section id="legacy" class="doc-section">
 <h2>기존 주소에서 전환하기</h2>
-<p>이 서비스의 기존 Muse별 공개 전송은 종료됐습니다. 기존 전용 주소를 호출하던 외부 프로그램은 공통 <code>POST /api/send</code>와 Muse별 송신 키로 변경하세요. Muse의 수신 연결과 대기 메시지는 유지됩니다. 기존 Muse별 send는 같은 Origin의 로그인한 소유자 웹 전송에만 사용합니다.</p>
+<p>이 서비스의 기존 Muse별 공개 전송은 종료됐습니다. 기존 전용 주소를 호출하던 외부 프로그램은 공통 <code>POST /api/send</code>와 수신함별 송신 키로 변경하세요. Muse의 수신 연결과 대기 메시지는 유지됩니다. 기존 Muse별 send는 같은 Origin의 로그인한 소유자 웹 전송에만 사용합니다.</p>
 <p>이 배포의 단일 VM <code>/send</code>도 기존 producer 인증이 필요합니다. 별도로 배포된 이전 VM 서비스는 이 배포의 대상이 아닙니다.</p>
 </section>
 <section id="errors" class="doc-section">
@@ -129,7 +130,7 @@ POST /api/muses/{muse_id}/messages/{id}/ack  {"lease_token":"점유토큰"}</cod
 </div>
 </div>
 </main>
-<footer class="site-footer"><span>Muse Relay · API reference</span><a href="/openapi.json">OpenAPI 3.1 명세 ↗</a><a href="/">내 Muse 연결하기 ↗</a>
+<footer class="site-footer"><span>Muse Relay · API reference</span><a href="/openapi.json">OpenAPI 3.1 명세 ↗</a><a href="/">수신함 만들기 ↗</a>
 </footer>
 </body>
 </html>
