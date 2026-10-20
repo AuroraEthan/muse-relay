@@ -2,7 +2,7 @@
 
 내 컴퓨터·VM에서 실행되는 Muse로 문장을 전달하는 서비스입니다. 사용자마다 전용 웹 전송 페이지와 API 주소를 만들고, 공개 수신을 켜면 송신자는 키 없이 자연어만 보낼 수 있습니다.
 
-[운영 서비스](https://vm-https-check-production.up.railway.app/) · [API 문서](https://vm-https-check-production.up.railway.app/api-docs) · [사용 안내](docs/USER-GUIDE.md)
+[운영 서비스](https://muse-relay-production-b5b7.up.railway.app/) · [API 문서](https://muse-relay-production-b5b7.up.railway.app/api-docs) · [사용 안내](docs/USER-GUIDE.md)
 
 ## 사용하기
 
