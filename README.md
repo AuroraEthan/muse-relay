@@ -1,5 +1,9 @@
 # Muse Relay
 
+A self-hostable, plain-text bridge from external apps to a paired Muse cloud VM.
+
+[![Tests](https://github.com/AuroraEthan/muse-relay/actions/workflows/ci.yml/badge.svg)](https://github.com/AuroraEthan/muse-relay/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 웹에서 만드는 것은 문장을 보관할 **수신함**입니다. 연결 프롬프트를 **원하는 Muse 대화에 붙여넣으면 그 Muse가 자신의 VM을 연결**합니다. 어떤 Muse를 쓸지는 사용자가 프롬프트를 전달하는 대화로 정합니다. API의 `muse_id`는 이 수신함의 식별자입니다.
 
 웹·Codex·API에서 받은 문장을 Muse의 클라우드 VM 내부 localhost 수신기로 전달하는 서비스입니다. 여기서 Muse는 Meta AI를 뜻합니다. 연결 프로그램은 Muse의 클라우드 VM 안에서 실행합니다. VM 내부 수신기와 Meta AI가 수신함을 읽고 처리하는 절차는 별도로 구성합니다. 사용자마다 수신함을 만들고 수신함별 송신 API 키를 발급합니다. 공통 API가 키로 수신함을 찾아 연결된 Muse의 VM으로 자연어를 전달합니다. 공개 수신은 지원하지 않습니다.
@@ -39,6 +43,8 @@ Content-Type: text/plain; charset=utf-8
 Python 3.10 이상과 표준 라이브러리만 사용합니다. 추가 Python 패키지가 필요 없습니다.
 
 ```sh
+git clone https://github.com/AuroraEthan/muse-relay.git
+cd muse-relay
 export PRODUCER_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 export CONSUMER_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 export PORT=8080
@@ -52,10 +58,34 @@ python3 server.py
 
 `PUBLIC_SEND`는 더 이상 익명 전송을 활성화하지 않습니다. 기존 공개 플래그는 비활성화되며 Muse별 send는 같은 Origin의 소유자 웹 세션만 허용합니다. 서버 토큰 두 개는 기존 API용이며, 새 사용자나 송신자에게 공유하지 않습니다.
 
+## Docker로 직접 운영하기
+
+Docker와 영구 볼륨을 사용해 같은 서버를 실행할 수 있습니다. 아래 키는 이 로컬 인스턴스 전용으로 새로 생성됩니다.
+
+```sh
+git clone https://github.com/AuroraEthan/muse-relay.git
+cd muse-relay
+docker build -t muse-relay:local .
+export PRODUCER_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export CONSUMER_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+docker volume create muse-relay-data
+docker run --rm --name muse-relay \
+  --publish 127.0.0.1:8080:8080 \
+  --env PRODUCER_TOKEN --env CONSUMER_TOKEN \
+  --env DB_PATH=/data/queue.db \
+  --env PUBLIC_ORIGIN=http://127.0.0.1:8080 \
+  --volume muse-relay-data:/data \
+  muse-relay:local
+```
+
+브라우저에서 `http://127.0.0.1:8080`을 열어 수신함을 만드세요. 컨테이너를 재시작할 때 동일한 환경 설정과 볼륨을 사용합니다. 외부 공개 배포에서는 HTTPS와 실제 서비스 origin을 설정하세요. 자세한 내용은 [Railway 배포 안내](docs/DEPLOYMENT.md)에 있습니다.
+
 ## 테스트와 배포
 
 ```sh
 python3 -m unittest discover -s tests -v
+node --check static/muse-setup.js
+node --test tests/test_setup_prompt.cjs
 node --check static/muse-test.js
 node --test tests/test_onboarding.cjs
 node --check static/muse.js
@@ -88,3 +118,12 @@ GitHub Actions가 Python 3.10·3.13 테스트, JavaScript 구문 검사와 Docke
 - 정상 재시작·재연결·복구는 로그에만 기록. 최초 설정·테스트와 요청한 작업 결과는 보고하고, 복구 알림은 사용자 조치가 필요한 지속 장애·인증 실패·처리 정체만 중복 없이 보고
 
 이는 Muse에게 전달하는 설정 요청입니다. 실제 자동 시작과 AI 처리 재개는 Muse 환경에서 검증해야 하며 웹의 수신기 ACK만으로 확인할 수 없습니다. 사용자 요청 없이 VM을 재부팅하지 않고, 실제 재부팅으로 검증하지 못한 부분은 구분하도록 요청합니다. 기기키가 폐기된 경우에는 새 연결이 필요합니다. 송신 API 키 교체는 기기 재연결을 요구하지 않습니다.
+
+## 오픈소스와 참여
+
+이 프로젝트는 [MIT License](LICENSE)로 공개합니다. 직접 호스팅하고 수정하거나 상업적 용도로 사용할 수 있습니다. 배포 시 라이선스의 저작권·허가 고지를 포함하세요.
+
+- [기여 안내](CONTRIBUTING.md) · [버그 제보](https://github.com/AuroraEthan/muse-relay/issues)
+- [보안 정책과 비공개 제보](SECURITY.md)
+
+Muse Relay는 Meta와 제휴하거나 Meta가 제공하는 공식 서비스가 아닌 독립 프로젝트입니다. Muse 도구·VM 실행 기능은 사용 중인 환경에서 제공돼야 하며, Relay가 Meta AI 계정이나 실행 환경을 제공하지는 않습니다.

@@ -42,6 +42,6 @@ for path in ('/api/send','/send'):
 get('/producer.env', 404)
 get('/vm.env', 404)
 with zipfile.ZipFile(io.BytesIO(get('/downloads/muse-agent.zip'))) as archive:
-    assert {'muse_agent.py', 'vm_agent.py', 'runtime.py', 'START.md'} <= set(archive.namelist())
+    assert {'muse_agent.py', 'vm_agent.py', 'runtime.py', 'START.md', 'LICENSE'} <= set(archive.namelist())
     assert not any(name.endswith('.env') for name in archive.namelist())
 print('Container health, Muse assets, API authentication and secret-file boundaries: PASS')

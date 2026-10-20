@@ -260,7 +260,7 @@ class Muses(unittest.TestCase):
         with self.anon.open(request) as response: raw=response.read()
         import io,zipfile
         with zipfile.ZipFile(io.BytesIO(raw)) as z:
-            self.assertTrue({'muse_agent.py','vm_agent.py','runtime.py','START.md'} <= set(z.namelist()))
+            self.assertTrue({'muse_agent.py','vm_agent.py','runtime.py','START.md','LICENSE'} <= set(z.namelist()))
             self.assertFalse(any(n.endswith('.env') for n in z.namelist()))
             self.assertIn('connect --server ' + self.url, z.read('START.md').decode())
 
