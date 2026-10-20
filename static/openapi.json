@@ -1641,7 +1641,7 @@
     },
     "/api/send": {
       "post": {
-        "summary": "Send text to the Muse resolved by the sender API key",
+        "summary": "Send text to the inbox resolved by the sender API key",
         "security": [
           {
             "senderAuth": []
@@ -1679,7 +1679,7 @@
             "description": "Expected UTF-8 text/plain"
           }
         },
-        "description": "UTF-8 text/plain <=16384 bytes; key determines target, no Muse ID or JSON required. 60 requests/minute/Muse, 1000 pending. Receipt is not execution confirmation.",
+        "description": "UTF-8 text/plain <=16384 bytes; key determines target, no Muse ID or JSON required. 60 requests/minute/inbox, 1000 pending. Receipt is not execution confirmation.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1853,12 +1853,12 @@
       "deviceAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Scoped to one Muse claim/ack; obtained by one-time pairing."
+        "description": "Scoped to one inbox claim/ack; obtained by one-time pairing."
       },
       "senderAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Send-only API key for exactly one Muse. Returned only at issuance; rotation/revocation invalidates old keys."
+        "description": "Send-only API key for exactly one inbox. Returned only at issuance; rotation/revocation invalidates old keys."
       }
     },
     "schemas": {
